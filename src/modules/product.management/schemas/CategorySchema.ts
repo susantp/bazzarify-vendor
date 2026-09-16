@@ -10,11 +10,12 @@ const ProductAuthoringCapabilitySchema = z.enum([
   "specifications",
   "images",
   "import",
+  "minimum_order_quantity",
 ]);
 
 export const CategoryAuthoringProfileSchema = z
   .object({
-    type: z.literal("retail"),
+    type: z.enum(["retail", "wholesale"]),
     status: z.literal("active"),
     capabilities: z.record(ProductAuthoringCapabilitySchema, z.boolean()),
     unavailable_reasons: z.record(z.string(), z.string()),
