@@ -48,6 +48,37 @@ export type TCategoryAuthoringProfile = {
   capabilities: Record<TProductAuthoringCapability, boolean>;
   unavailable_reasons: Partial<Record<TProductAuthoringCapability, string>>;
 };
+export type TCategoryAuthoringReadinessCheck = {
+  code: string;
+  passed: boolean;
+  message: string;
+};
+export type TCategoryAuthoringReadiness = {
+  ready: boolean;
+  category: Pick<TCategory, "uuid" | "slug"> & { is_sellable: boolean };
+  profile: {
+    uuid: string | null;
+    version: number | null;
+    type: string | null;
+    status: string | null;
+  };
+  checks: TCategoryAuthoringReadinessCheck[];
+  summary: { passed: number; failed: number };
+};
+export type TCategoryAuthoringMutationPayload = {
+  activation?: {
+    ok: boolean;
+    idempotent: boolean;
+    profile?: { uuid: string; version: number; type: string; status: string };
+    readiness?: TCategoryAuthoringReadiness;
+  };
+  rollback?: {
+    ok: boolean;
+    idempotent: boolean;
+    profile?: { uuid: string; version: number; type: string; status: string };
+    readiness?: TCategoryAuthoringReadiness;
+  };
+};
 export type TProduct = {
   type: "retail" | "wholesale";
   uuid: string;

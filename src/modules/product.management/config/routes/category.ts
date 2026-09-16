@@ -24,5 +24,16 @@ const category: IRoute["category"] = {
   viewParentRecursive: {
     path: "/product-management/categories/:slug/view-parent-recursive",
   },
+  authoringReadiness: {
+    path: "/product-management/categories/:slug/authoring-readiness",
+  },
+  authoringActivation: {
+    path: "/product-management/categories/:slug/authoring-activation",
+    method: "POST",
+  },
+  authoringRollback: {
+    path: "/product-management/categories/:slug/authoring-activation/rollback",
+    method: "POST",
+  },
 };
 export default category;
