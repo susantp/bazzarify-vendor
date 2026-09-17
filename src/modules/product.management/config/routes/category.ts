@@ -27,6 +27,9 @@ const category: IRoute["category"] = {
   authoringReadiness: {
     path: "/product-management/categories/:slug/authoring-readiness",
   },
+  authoringCandidates: {
+    path: "/product-management/categories/:slug/authoring-candidates",
+  },
   authoringActivation: {
     path: "/product-management/categories/:slug/authoring-activation",
     method: "POST",

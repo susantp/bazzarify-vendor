@@ -7,6 +7,8 @@ import { handleUnknownError } from "@/modules/core/lib/utils.index";
 import { getValidationFeedback } from "@/modules/core/lib/utils.validationFeedback";
 import {
   TCategoryAuthoringContextPayload,
+  TCategoryAuthoringActivationRequest,
+  TCategoryAuthoringCandidate,
   TCategoryAuthoringMutationPayload,
   TCategoryAuthoringReadiness,
   TCategoryIndexPayload,
@@ -22,19 +24,65 @@ const AuthoringReadinessCheckSchema = z.object({
   message: z.string(),
 });
 const AuthoringReadinessSchema = z.object({
+  // Backend: CategoryAuthoringReadiness::evaluate() and evaluateCandidate() derive this from failed checks.
   ready: z.boolean(),
+  // Backend: both readiness evaluators serialize the category identity and sellability state.
   category: z.object({ uuid: z.uuid(), slug: z.string(), is_sellable: z.boolean() }),
+  // Backend: both readiness evaluators serialize the active or proposed immutable profile summary.
   profile: z.object({
     uuid: z.uuid().nullable(),
     version: z.number().nullable(),
     type: z.string().nullable(),
     status: z.string().nullable(),
   }),
+  // Backend: readiness evaluators append stable check code, result, and message records.
   checks: z.array(AuthoringReadinessCheckSchema),
+  // Backend: both readiness evaluators count passed and failed check records.
   summary: z.object({ passed: z.number(), failed: z.number() }),
 });
 const AuthoringReadinessPayloadSchema = z.object({
   readiness: AuthoringReadinessSchema,
+});
+const AuthoringCandidateProfileSchema = z.object({
+  // Backend: CategoryAuthoringProfileData::toArray() -> ProductType::value.
+  type: z.enum(["retail", "wholesale"]),
+  // Backend: CategoryAuthoringProfileData::toArray() -> status.
+  status: z.literal("active"),
+  // Backend: CategoryAuthoringProfileData::toArray() -> normalized capability flags.
+  capabilities: z.record(z.enum([
+    "product_sku",
+    "variants",
+    "customer_options",
+    "inventory",
+    "base_price",
+    "specifications",
+    "images",
+    "import",
+    "minimum_order_quantity",
+  ]), z.boolean()),
+  // Backend: CategoryAuthoringProfileData::toArray(); PHP empty arrays encode as JSON [].
+  unavailable_reasons: z.union([
+    z.record(z.string(), z.string()),
+    z.array(z.never()),
+  ]).transform((value) => Array.isArray(value) ? {} : value),
+  // Backend: ProductCommercePolicyData::toArray().
+  commerce_policy: z.object({
+    default_minimum_order_quantity: z.number().int(),
+    enforce_minimum_order_quantity_on_cart: z.boolean(),
+    enforce_minimum_order_quantity_on_checkout: z.boolean(),
+    mixed_cart_mode: z.enum(["compatible", "single_family"]),
+    fulfillment_mode: z.literal("inventory_shipping"),
+    cancellation_mode: z.literal("item_level_policy"),
+    refund_mode: z.literal("item_level_policy"),
+  }),
+});
+const AuthoringCandidatesPayloadSchema = z.object({
+  // Backend: CategoryAuthoringReadiness::candidateProfiles() constructs this list.
+  candidates: z.array(z.object({
+    profile: AuthoringCandidateProfileSchema,
+    // Backend: CategoryAuthoringReadiness::evaluateCandidate() constructs readiness checks.
+    readiness: AuthoringReadinessSchema,
+  })),
 });
 const AuthoringMutationPayloadSchema = z.object({
   activation: z.object({
@@ -213,14 +261,34 @@ export const actionGetCategoryAuthoringReadiness = async (
   }
 };
 
+export const actionGetCategoryAuthoringCandidates = async (
+  slug: string,
+): Promise<TCategoryAuthoringCandidate[] | ReturnType<typeof handleUnknownError>> => {
+  try {
+    const response = await (await authAxiosInstance()).get(
+      PRODUCT_MANAGEMENT_ROUTES.category.authoringCandidates.path.replace(":slug", slug),
+    );
+    const parsed = ApiResponseSchema(AuthoringCandidatesPayloadSchema).safeParse(response.data);
+    if (!parsed.success) {
+      throw new Error(`Category authoring candidates schema validation failed [PRODUCT_AUTHORING_CANDIDATES] ${z.prettifyError(parsed.error)}`);
+    }
+    if (parsed.data.metaData.error || parsed.data.data.payload === null) {
+      return handleUnknownError(parsed.data.metaData.error ?? "Unable to load authoring candidates.");
+    }
+    return parsed.data.data.payload.candidates;
+  } catch (error) {
+    return handleUnknownError(error);
+  }
+};
+
 export const actionActivateCategoryAuthoring = async (
   slug: string,
-  profileUuid: string,
+  payload: TCategoryAuthoringActivationRequest,
 ): Promise<TCategoryAuthoringMutationPayload | ReturnType<typeof handleUnknownError>> => {
   try {
     const response = await (await authAxiosInstance()).post(
       PRODUCT_MANAGEMENT_ROUTES.category.authoringActivation.path.replace(":slug", slug),
-      { profile_uuid: profileUuid },
+      payload,
     );
     const parsed = ApiResponseSchema(AuthoringMutationPayloadSchema).safeParse(response.data);
     if (!parsed.success || parsed.data.metaData.error || parsed.data.data.payload === null) {

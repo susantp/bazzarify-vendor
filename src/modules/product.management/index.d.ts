@@ -65,6 +65,28 @@ export type TCategoryAuthoringReadiness = {
   checks: TCategoryAuthoringReadinessCheck[];
   summary: { passed: number; failed: number };
 };
+type TCategoryAuthoringProfileDefinition = {
+  type: "retail" | "wholesale";
+  status: "active";
+  capabilities: Record<TProductAuthoringCapability, boolean>;
+  unavailable_reasons: Partial<Record<TProductAuthoringCapability, string>>;
+  commerce_policy: {
+    default_minimum_order_quantity: number;
+    enforce_minimum_order_quantity_on_cart: boolean;
+    enforce_minimum_order_quantity_on_checkout: boolean;
+    mixed_cart_mode: "compatible" | "single_family";
+    fulfillment_mode: "inventory_shipping";
+    cancellation_mode: "item_level_policy";
+    refund_mode: "item_level_policy";
+  };
+};
+export type TCategoryAuthoringCandidate = {
+  profile: TCategoryAuthoringProfileDefinition;
+  readiness: TCategoryAuthoringReadiness;
+};
+export type TCategoryAuthoringActivationRequest =
+  | { profile_uuid: string }
+  | { profile: TCategoryAuthoringProfileDefinition };
 export type TCategoryAuthoringMutationPayload = {
   activation?: {
     ok: boolean;
