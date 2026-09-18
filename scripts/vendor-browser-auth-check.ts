@@ -129,6 +129,7 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   const browser = await chromium.launch({
     headless: true,
+    executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH,
   });
 
   const context = await browser.newContext();
