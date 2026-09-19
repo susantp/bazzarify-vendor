@@ -48,7 +48,8 @@ export type TEntities =
   | "login"
   | "register"
   | "reset"
-  | "user";
+  | "user"
+  | "adminTicket";
 
 export interface RouteConfig {
   path: string;
