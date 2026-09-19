@@ -32,11 +32,49 @@ interface ProductAuthoringFormProps {
   mode: ProductAuthoringMode;
 }
 
+export type ProductAuthoringStep =
+  | "all"
+  | "setup"
+  | "category_details"
+  | "options"
+  | "media"
+  | "review";
+
 export default function ProductAuthoringForm({
   categoryIndexPayload,
   controller,
   mode,
 }: ProductAuthoringFormProps) {
+  return (
+    <PageContainer
+      pageTitle={mode === "create" ? "Create Products" : "Edit Product"}
+      actionSlot={<BackLinkButton href="/products" label="Back to Products" />}
+    >
+      <ProductAuthoringStepContent
+        categoryIndexPayload={categoryIndexPayload}
+        controller={controller}
+        mode={mode}
+        activeStep="all"
+      />
+    </PageContainer>
+  );
+}
+
+interface ProductAuthoringStepContentProps {
+  categoryIndexPayload: TCategoryIndexPayload;
+  controller: ProductAuthoringController;
+  mode: ProductAuthoringMode;
+  activeStep: ProductAuthoringStep;
+  showSubmit?: boolean;
+}
+
+export function ProductAuthoringStepContent({
+  categoryIndexPayload,
+  controller,
+  mode,
+  activeStep,
+  showSubmit = true,
+}: ProductAuthoringStepContentProps) {
   const { authoringSchema, basicState, categoryState, submissionState } =
     controller;
   const feedback = submissionState.feedback;
@@ -49,32 +87,41 @@ export default function ProductAuthoringForm({
   const variantsError = hasSubmissionFieldPrefix(feedback, "variants");
   const supportsField = (fieldKey: string) =>
     isAuthoringFieldVisible(authoringSchema, fieldKey, mode);
+  const showSetup = activeStep === "all" || activeStep === "setup";
+  const showCategoryDetails =
+    activeStep === "all" || activeStep === "category_details";
+  const showOptions = activeStep === "all" || activeStep === "options";
+  const showMedia = activeStep === "all" || activeStep === "media";
+  const showReview = activeStep === "all" || activeStep === "review";
 
   return (
-    <PageContainer
-      pageTitle={mode === "create" ? "Create Products" : "Edit Product"}
-      actionSlot={<BackLinkButton href="/products" label="Back to Products" />}
-    >
-      <BasicInformationSection
-        basicState={basicState}
-        feedback={feedback}
-        authoringSchema={authoringSchema}
-        mode={mode}
-        supportsBasePrice={supportsField("base_price")}
-        supportsMinimumOrderQuantity={supportsField("minimum_order_quantity")}
-      />
-      <CategorySection
-        categoryIndexPayload={categoryIndexPayload}
-        categoryState={categoryState}
-        mode={mode}
-        categoryError={categoryError}
-      />
-      {authoringSchema && (
+    <>
+      {showSetup && (
+        <>
+          <BasicInformationSection
+            basicState={basicState}
+            feedback={feedback}
+            authoringSchema={authoringSchema}
+            mode={mode}
+            supportsBasePrice={supportsField("base_price")}
+            supportsMinimumOrderQuantity={supportsField(
+              "minimum_order_quantity",
+            )}
+          />
+          <CategorySection
+            categoryIndexPayload={categoryIndexPayload}
+            categoryState={categoryState}
+            mode={mode}
+            categoryError={categoryError}
+          />
+        </>
+      )}
+      {showSetup && authoringSchema && (
         <UnavailableAuthoringFields
           fields={authoringSchema.unavailable_fields}
         />
       )}
-      {categoryState.committedCategory && !authoringSchema && (
+      {showSetup && categoryState.committedCategory && !authoringSchema && (
         <p
           className="rounded-md border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive"
           role="alert"
@@ -88,21 +135,21 @@ export default function ProductAuthoringForm({
       )}
       {categoryState.committedCategory && authoringSchema && (
         <>
-          {supportsField("images") && (
+          {showMedia && supportsField("images") && (
             <MediaSection
               controller={controller}
               mode={mode}
               imagesError={imagesError}
             />
           )}
-          {supportsField("specifications") && (
+          {showCategoryDetails && supportsField("specifications") && (
             <SpecificationsSection
               controller={controller}
               feedback={feedback}
               mode={mode}
             />
           )}
-          {supportsField("variants") && (
+          {showOptions && supportsField("variants") && (
             <OptionsSection
               controller={controller}
               feedback={feedback}
@@ -111,10 +158,12 @@ export default function ProductAuthoringForm({
               variantsError={variantsError}
             />
           )}
-          <SubmitSection submissionState={submissionState} />
+          {showReview && showSubmit && (
+            <SubmitSection submissionState={submissionState} />
+          )}
         </>
       )}
-    </PageContainer>
+    </>
   );
 }
 

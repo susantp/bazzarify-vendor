@@ -6,7 +6,7 @@ import {
   TCategoryIndexPayload,
   TEditProductPayload,
 } from "@/modules/product.management";
-import ProductAuthoringForm from "@/modules/product.management/components/client/product/ProductAuthoringForm";
+import ProductAuthoringDraftForm from "@/modules/product.management/components/client/product/ProductAuthoringDraftForm";
 import useUpdateProduct from "@/modules/product.management/hooks/useUpdateProduct";
 
 interface EditProps {
@@ -43,10 +43,11 @@ function EditContent({
   const controller = useUpdateProduct(productPayload);
 
   return (
-    <ProductAuthoringForm
+    <ProductAuthoringDraftForm
       categoryIndexPayload={categoryIndexPayload}
       controller={controller}
       mode="update"
+      targetProductUuid={productPayload.product.uuid}
     />
   );
 }

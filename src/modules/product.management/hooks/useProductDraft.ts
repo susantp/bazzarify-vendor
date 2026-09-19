@@ -2,6 +2,7 @@ import type { TProductDraft } from "@/modules/product.management";
 import {
   actionAbandonProductDraft,
   actionGetProductDraft,
+  actionListProductDrafts,
   actionSaveProductDraftStep,
   actionStartProductDraft,
 } from "@/modules/product.management/actions/draft";
@@ -52,21 +53,74 @@ export default function useProductDraft(uuid?: string) {
     return null;
   }, []);
 
-  const startDraft = useCallback(async (input: StartDraftInput) => {
-    setIsPending(true);
-    setFeedback(null);
-    const result = await actionStartProductDraft(input);
-    setIsPending(false);
+  const resumeDraft = useCallback(
+    async (mode: "create" | "edit", targetProductUuid?: string) => {
+      setIsPending(true);
+      setFeedback(null);
+      const result = await actionListProductDrafts();
+      setIsPending(false);
 
-    if (isDraft(result)) {
-      setDraft(result);
-      setSavedLabel("Draft created");
-      return result;
-    }
+      if ("error" in result) {
+        setFeedback({
+          error: result.error ?? "Unable to resume product draft.",
+          errorCode: result.errorCode,
+        });
+        return null;
+      }
 
-    setFeedback(toFeedback(result));
-    return null;
-  }, []);
+      const matchingDraft = result.drafts.find(
+        (candidate) =>
+          candidate.mode === mode &&
+          (mode === "create" ||
+            candidate.target_product_uuid === targetProductUuid),
+      );
+
+      if (!matchingDraft) {
+        return null;
+      }
+
+      setDraft(matchingDraft);
+      setSavedLabel("Draft resumed");
+      return matchingDraft;
+    },
+    [],
+  );
+
+  const startDraft = useCallback(
+    async (input: StartDraftInput, advance = false) => {
+      setIsPending(true);
+      setFeedback(null);
+      const result = await actionStartProductDraft(input);
+      setIsPending(false);
+
+      if (isDraft(result)) {
+        if (advance) {
+          const advanced = await actionSaveProductDraftStep(
+            result.uuid,
+            "setup",
+            result.version,
+            input.payload ?? {},
+            true,
+          );
+          if (isDraft(advanced)) {
+            setDraft(advanced);
+            setSavedLabel("Saved just now");
+            return advanced;
+          }
+          setFeedback(toFeedback(advanced));
+          return null;
+        }
+
+        setDraft(result);
+        setSavedLabel("Draft created");
+        return result;
+      }
+
+      setFeedback(toFeedback(result));
+      return null;
+    },
+    [],
+  );
 
   const saveStep = useCallback(
     async (
@@ -129,6 +183,7 @@ export default function useProductDraft(uuid?: string) {
     feedback,
     isPending,
     loadDraft: uuid ? () => loadDraft(uuid) : loadDraft,
+    resumeDraft,
     savedLabel,
     saveStep,
     startDraft,

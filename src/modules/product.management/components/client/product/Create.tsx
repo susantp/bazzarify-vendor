@@ -3,7 +3,7 @@
 import { IMetaData } from "@/modules/core";
 import ErrorComponent from "@/modules/core/components/client/ErrorComponent";
 import { TCategoryIndexPayload } from "@/modules/product.management";
-import ProductAuthoringForm from "@/modules/product.management/components/client/product/ProductAuthoringForm";
+import ProductAuthoringDraftForm from "@/modules/product.management/components/client/product/ProductAuthoringDraftForm";
 import useCreateProduct from "@/modules/product.management/hooks/useCreateProduct";
 
 interface CreateProps {
@@ -26,7 +26,7 @@ function CreateContent({
   const controller = useCreateProduct();
 
   return (
-    <ProductAuthoringForm
+    <ProductAuthoringDraftForm
       categoryIndexPayload={categoryIndexPayload}
       controller={controller}
       mode="create"
