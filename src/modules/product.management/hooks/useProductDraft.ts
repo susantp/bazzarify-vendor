@@ -1,0 +1,136 @@
+import type { TProductDraft } from "@/modules/product.management";
+import {
+  actionAbandonProductDraft,
+  actionGetProductDraft,
+  actionSaveProductDraftStep,
+  actionStartProductDraft,
+} from "@/modules/product.management/actions/draft";
+import { useCallback, useState } from "react";
+
+type DraftFeedback = {
+  error: string;
+  errorCode?: number;
+};
+
+type StartDraftInput = Parameters<typeof actionStartProductDraft>[0];
+
+const isDraft = (
+  value: Awaited<ReturnType<typeof actionGetProductDraft>>,
+): value is TProductDraft => "workflow" in value;
+
+const toFeedback = (
+  value: Awaited<ReturnType<typeof actionGetProductDraft>>,
+): DraftFeedback | null => {
+  if (isDraft(value) || !value.error) {
+    return null;
+  }
+
+  return {
+    error: value.error,
+    errorCode: value.errorCode,
+  };
+};
+
+export default function useProductDraft(uuid?: string) {
+  const [draft, setDraft] = useState<TProductDraft | null>(null);
+  const [feedback, setFeedback] = useState<DraftFeedback | null>(null);
+  const [isPending, setIsPending] = useState(false);
+  const [savedLabel, setSavedLabel] = useState<string>();
+
+  const loadDraft = useCallback(async (draftUuid: string) => {
+    setIsPending(true);
+    setFeedback(null);
+    const result = await actionGetProductDraft(draftUuid);
+    setIsPending(false);
+
+    if (isDraft(result)) {
+      setDraft(result);
+      return result;
+    }
+
+    setFeedback(toFeedback(result));
+    return null;
+  }, []);
+
+  const startDraft = useCallback(async (input: StartDraftInput) => {
+    setIsPending(true);
+    setFeedback(null);
+    const result = await actionStartProductDraft(input);
+    setIsPending(false);
+
+    if (isDraft(result)) {
+      setDraft(result);
+      setSavedLabel("Draft created");
+      return result;
+    }
+
+    setFeedback(toFeedback(result));
+    return null;
+  }, []);
+
+  const saveStep = useCallback(
+    async (
+      stepKey: string,
+      payload: Record<string, unknown>,
+      advance = false,
+    ) => {
+      if (!draft) {
+        return null;
+      }
+
+      setIsPending(true);
+      setFeedback(null);
+      const result = await actionSaveProductDraftStep(
+        draft.uuid,
+        stepKey,
+        draft.version,
+        payload,
+        advance,
+      );
+      setIsPending(false);
+
+      if (isDraft(result)) {
+        setDraft(result);
+        setSavedLabel("Saved just now");
+        return result;
+      }
+
+      setFeedback(toFeedback(result));
+      return null;
+    },
+    [draft],
+  );
+
+  const abandon = useCallback(async () => {
+    if (!draft) {
+      return false;
+    }
+
+    setIsPending(true);
+    const result = await actionAbandonProductDraft(draft.uuid);
+    setIsPending(false);
+    setFeedback(
+      result.error
+        ? { error: result.error, errorCode: result.errorCode }
+        : null,
+    );
+
+    if (!result.error) {
+      setDraft(null);
+      return true;
+    }
+
+    return false;
+  }, [draft]);
+
+  return {
+    abandon,
+    draft,
+    feedback,
+    isPending,
+    loadDraft: uuid ? () => loadDraft(uuid) : loadDraft,
+    savedLabel,
+    saveStep,
+    startDraft,
+  };
+}

@@ -40,6 +40,7 @@ export type TEntities =
   | "order"
   | "category"
   | "product"
+  | "productDraft"
   | "variant"
   | "image"
   | "attribute"
