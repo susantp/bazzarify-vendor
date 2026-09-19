@@ -1,10 +1,12 @@
 import type { TProductDraft } from "@/modules/product.management";
 import {
   actionAbandonProductDraft,
+  actionDeleteProductDraftMedia,
   actionGetProductDraft,
   actionListProductDrafts,
   actionSaveProductDraftStep,
   actionStartProductDraft,
+  actionUploadProductDraftMedia,
 } from "@/modules/product.management/actions/draft";
 import { useCallback, useState } from "react";
 
@@ -31,6 +33,13 @@ const toFeedback = (
     errorCode: value.errorCode,
   };
 };
+
+const isMediaUpload = (
+  value: Awaited<ReturnType<typeof actionUploadProductDraftMedia>>,
+): value is Extract<
+  Awaited<ReturnType<typeof actionUploadProductDraftMedia>>,
+  { draft: TProductDraft }
+> => "draft" in value;
 
 export default function useProductDraft(uuid?: string) {
   const [draft, setDraft] = useState<TProductDraft | null>(null);
@@ -155,6 +164,57 @@ export default function useProductDraft(uuid?: string) {
     [draft],
   );
 
+  const uploadMedia = useCallback(
+    async (file: File, clientKey?: string) => {
+      if (!draft) {
+        return null;
+      }
+
+      setIsPending(true);
+      setFeedback(null);
+      const result = await actionUploadProductDraftMedia(
+        draft.uuid,
+        draft.version,
+        file,
+        clientKey,
+      );
+      setIsPending(false);
+
+      if (isMediaUpload(result)) {
+        setDraft(result.draft);
+        setSavedLabel("Media saved just now");
+        return result;
+      }
+
+      setFeedback(toFeedback(result));
+      return null;
+    },
+    [draft],
+  );
+
+  const removeMedia = useCallback(
+    async (mediaUuid: string) => {
+      if (!draft) {
+        return null;
+      }
+
+      setIsPending(true);
+      setFeedback(null);
+      const result = await actionDeleteProductDraftMedia(draft.uuid, mediaUuid);
+      setIsPending(false);
+
+      if (isDraft(result)) {
+        setDraft(result);
+        setSavedLabel("Media removed just now");
+        return result;
+      }
+
+      setFeedback(toFeedback(result));
+      return null;
+    },
+    [draft],
+  );
+
   const abandon = useCallback(async () => {
     if (!draft) {
       return false;
@@ -183,9 +243,11 @@ export default function useProductDraft(uuid?: string) {
     feedback,
     isPending,
     loadDraft: uuid ? () => loadDraft(uuid) : loadDraft,
+    removeMedia,
     resumeDraft,
     savedLabel,
     saveStep,
     startDraft,
+    uploadMedia,
   };
 }

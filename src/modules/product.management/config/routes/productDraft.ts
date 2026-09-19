@@ -15,6 +15,14 @@ const productDraft: IRoute["productDraft"] = {
     path: "/product-management/product-drafts/:uuid/steps/:stepKey",
     method: "PUT",
   },
+  mediaStore: {
+    path: "/product-management/product-drafts/:uuid/media",
+    method: "POST",
+  },
+  mediaDestroy: {
+    path: "/product-management/product-drafts/:uuid/media/:mediaUuid",
+    method: "DELETE",
+  },
   destroy: {
     path: "/product-management/product-drafts/:uuid",
     method: "DELETE",

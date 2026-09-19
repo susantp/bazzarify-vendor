@@ -6,6 +6,7 @@ import { ChangeEvent, Dispatch, ReactNode, SetStateAction } from "react";
 export type { TProductAuthoringSchema } from "@/modules/product.management/schemas/ProductAuthoringSchema";
 export type {
   TProductDraft,
+  TProductDraftMedia,
   TProductDraftStep,
 } from "@/modules/product.management/schemas/ProductDraftSchema";
 

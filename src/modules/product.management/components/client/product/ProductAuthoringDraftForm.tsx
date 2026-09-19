@@ -283,6 +283,7 @@ function ProductAuthoringShellFallback({
           actions: { save: true, review: false, commit: false, abandon: true },
         },
         reviews: [],
+        media: [],
       }}
       onBack={onBack}
       onEditSetup={() => undefined}

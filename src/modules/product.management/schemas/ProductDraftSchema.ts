@@ -37,6 +37,18 @@ const ProductDraftWorkflowSchema = z.object({
   }),
 });
 
+const ProductDraftMediaSchema = z.object({
+  uuid: z.uuid(),
+  step_key: z.string().min(1),
+  client_key: z.string().nullable(),
+  original_name: z.string().min(1),
+  mime_type: z.string().min(1),
+  size: z.number().int().nonnegative(),
+  checksum: z.string().length(64),
+  status: z.string().min(1),
+  created_at: z.string().nullable(),
+});
+
 export const ProductDraftSchema = z.object({
   uuid: z.uuid(),
   mode: z.enum(["create", "edit"]),
@@ -69,6 +81,7 @@ export const ProductDraftSchema = z.object({
       }),
     )
     .default([]),
+  media: z.array(ProductDraftMediaSchema).default([]),
 });
 
 export const ProductDraftIndexPayloadSchema = z.object({
@@ -77,3 +90,4 @@ export const ProductDraftIndexPayloadSchema = z.object({
 
 export type TProductDraft = z.infer<typeof ProductDraftSchema>;
 export type TProductDraftStep = z.infer<typeof ProductDraftStepSchema>;
+export type TProductDraftMedia = z.infer<typeof ProductDraftMediaSchema>;
