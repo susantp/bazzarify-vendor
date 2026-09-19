@@ -282,6 +282,7 @@ function ProductAuthoringShellFallback({
           progress: { total_steps: 5, completed_steps: 0, remaining_steps: 5 },
           actions: { save: true, review: false, commit: false, abandon: true },
         },
+        reviews: [],
       }}
       onBack={onBack}
       onEditSetup={() => undefined}

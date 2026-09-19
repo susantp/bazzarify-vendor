@@ -43,6 +43,9 @@ export const ProductDraftSchema = z.object({
   status: z.enum([
     "in_progress",
     "ready_for_review",
+    "submitted_for_review",
+    "in_review",
+    "changes_requested",
     "committing",
     "committed",
     "abandoned",
@@ -55,6 +58,17 @@ export const ProductDraftSchema = z.object({
   target_product_uuid: z.uuid().nullable(),
   last_saved_at: z.string().nullable(),
   workflow: ProductDraftWorkflowSchema,
+  reviews: z
+    .array(
+      z.object({
+        uuid: z.uuid(),
+        state: z.enum(["in_review", "changes_requested"]),
+        comment: z.string().nullable(),
+        reviewer_user_uuid: z.uuid(),
+        created_at: z.string().nullable(),
+      }),
+    )
+    .default([]),
 });
 
 export const ProductDraftIndexPayloadSchema = z.object({
