@@ -13,7 +13,7 @@ import {
 } from "@/modules/product.management/components/client/product/ProductAuthoringForm";
 import useProductDraft from "@/modules/product.management/hooks/useProductDraft";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface ProductAuthoringDraftFormProps {
   categoryIndexPayload: TCategoryIndexPayload;
@@ -66,7 +66,7 @@ export default function ProductAuthoringDraftForm({
     null,
   );
   const resumeAttempted = useRef(false);
-  const { draft, resumeDraft } = draftController;
+  const { draft, removeMedia, resumeDraft, uploadMedia } = draftController;
   const activeStep =
     selectedStep ??
     (draft?.current_step as ProductAuthoringStep | undefined) ??
@@ -144,6 +144,15 @@ export default function ProductAuthoringDraftForm({
     }
   };
 
+  const uploadDraftMedia = useCallback(
+    async (file: File) => Boolean((await uploadMedia(file))?.media),
+    [uploadMedia],
+  );
+  const removeDraftMedia = useCallback(
+    async (mediaUuid: string) => Boolean(await removeMedia(mediaUuid)),
+    [removeMedia],
+  );
+
   if (!draft) {
     return (
       <ProductAuthoringShellFallback
@@ -177,7 +186,6 @@ export default function ProductAuthoringDraftForm({
         "Selected",
     },
   ];
-
   return (
     <ProductAuthoringShell
       draft={draft}
@@ -216,6 +224,9 @@ export default function ProductAuthoringDraftForm({
         mode={mode}
         activeStep={activeStep}
         showSubmit={false}
+        draftMedia={draft.media}
+        onUploadDraftMedia={uploadDraftMedia}
+        onRemoveDraftMedia={removeDraftMedia}
       />
     </ProductAuthoringShell>
   );

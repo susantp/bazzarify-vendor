@@ -9,6 +9,7 @@ import { ThemedButton } from "@/modules/core/components/server/ThemedButton";
 import type {
   ProductAuthoringController,
   TCategoryIndexPayload,
+  TProductDraftMedia,
 } from "@/modules/product.management";
 import CategoryDropdown from "@/modules/product.management/ui/CategoryDropdown";
 import ImageUploader from "@/modules/product.management/ui/ImageUploader";
@@ -66,6 +67,9 @@ interface ProductAuthoringStepContentProps {
   mode: ProductAuthoringMode;
   activeStep: ProductAuthoringStep;
   showSubmit?: boolean;
+  draftMedia?: TProductDraftMedia[];
+  onUploadDraftMedia?: (file: File) => Promise<boolean>;
+  onRemoveDraftMedia?: (mediaUuid: string) => Promise<boolean>;
 }
 
 export function ProductAuthoringStepContent({
@@ -74,6 +78,9 @@ export function ProductAuthoringStepContent({
   mode,
   activeStep,
   showSubmit = true,
+  draftMedia = [],
+  onUploadDraftMedia,
+  onRemoveDraftMedia,
 }: ProductAuthoringStepContentProps) {
   const { authoringSchema, basicState, categoryState, submissionState } =
     controller;
@@ -93,6 +100,10 @@ export function ProductAuthoringStepContent({
   const showOptions = activeStep === "all" || activeStep === "options";
   const showMedia = activeStep === "all" || activeStep === "media";
   const showReview = activeStep === "all" || activeStep === "review";
+  const canRenderDraftMediaWithoutContext =
+    showMedia &&
+    Boolean(onUploadDraftMedia) &&
+    (!categoryState.committedCategory || !authoringSchema);
 
   return (
     <>
@@ -140,6 +151,9 @@ export function ProductAuthoringStepContent({
               controller={controller}
               mode={mode}
               imagesError={imagesError}
+              stagedImages={draftMedia}
+              onStageImage={onUploadDraftMedia}
+              onRemoveStaged={onRemoveDraftMedia}
             />
           )}
           {showCategoryDetails && supportsField("specifications") && (
@@ -162,6 +176,16 @@ export function ProductAuthoringStepContent({
             <SubmitSection submissionState={submissionState} />
           )}
         </>
+      )}
+      {canRenderDraftMediaWithoutContext && (
+        <MediaSection
+          controller={controller}
+          mode={mode}
+          imagesError={imagesError}
+          stagedImages={draftMedia}
+          onStageImage={onUploadDraftMedia}
+          onRemoveStaged={onRemoveDraftMedia}
+        />
       )}
     </>
   );
@@ -364,10 +388,21 @@ interface MediaSectionProps {
   controller: ProductAuthoringController;
   mode: ProductAuthoringMode;
   imagesError?: string;
+  stagedImages?: TProductDraftMedia[];
+  onStageImage?: (file: File) => Promise<boolean>;
+  onRemoveStaged?: (mediaUuid: string) => Promise<boolean>;
 }
 
-function MediaSection({ controller, mode, imagesError }: MediaSectionProps) {
+function MediaSection({
+  controller,
+  mode,
+  imagesError,
+  stagedImages = [],
+  onStageImage,
+  onRemoveStaged,
+}: MediaSectionProps) {
   const { mediaState } = controller;
+  const isDraftMedia = Boolean(onStageImage);
 
   return (
     <ProductCard
@@ -382,16 +417,27 @@ function MediaSection({ controller, mode, imagesError }: MediaSectionProps) {
         ],
       }}
     >
-      {mode === "update" && (
+      {isDraftMedia && (
+        <p className="mb-3 text-sm text-muted-foreground">
+          Images are saved to this draft and will be published only after
+          administrator review and a separate publication action.
+        </p>
+      )}
+      {mode === "update" && !isDraftMedia && (
         <p className="mb-3 text-sm text-muted-foreground">
           Existing product image removals are staged locally and only apply
           after you save this product.
         </p>
       )}
       <ImageUploader
-        onImageSelect={mediaState.handleProductImageUpload}
+        onImageSelect={
+          isDraftMedia ? undefined : mediaState.handleProductImageUpload
+        }
         initialImages={mediaState.existingProductImages}
-        {...(mode === "update"
+        stagedImages={stagedImages}
+        onStageImage={onStageImage}
+        onRemoveStaged={onRemoveStaged}
+        {...(mode === "update" && !isDraftMedia
           ? {
               onRemoveExisting: async (url: string) =>
                 await mediaState.handleRemoveExistingProductImage!(url),
