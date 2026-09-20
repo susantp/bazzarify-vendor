@@ -198,6 +198,23 @@ export const actionDeleteProductDraftMedia = async (
   }
 };
 
+export const actionReviewProductDraft = async (
+  uuid: string,
+  state: "in_review" | "changes_requested" | "approved",
+  comment?: string,
+): Promise<ProductDraftResult> => {
+  try {
+    const client = await authAxiosInstance();
+    const response = await client.patch(
+      PRODUCT_MANAGEMENT_ROUTES.productDraft.review.path.replace(":uuid", uuid),
+      { state, ...(comment?.trim() ? { comment: comment.trim() } : {}) },
+    );
+    return parseDraft(response.data as ApiResponse<TProductDraft>);
+  } catch (error) {
+    return handleUnknownError(error);
+  }
+};
+
 export const actionAbandonProductDraft = async (
   uuid: string,
 ): Promise<IMetaData> => {

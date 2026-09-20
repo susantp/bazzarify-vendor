@@ -21,6 +21,7 @@ import {
   actionUpdateAdminTicket,
 } from "@/modules/admin/workflow/actions/adminTicket";
 import type { TAdminTicket } from "@/modules/admin/workflow/schemas/AdminTicketSchema";
+import { actionReviewProductDraft } from "@/modules/product.management/actions/draft";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -40,6 +41,12 @@ const priorities: TAdminTicket["priority"][] = [
   "urgent",
 ];
 
+const reviewStatuses: TAdminTicket["status"][] = [
+  "in_review",
+  "changes_requested",
+  "approved",
+];
+
 export default function AdminTicketDetail({
   ticket,
 }: {
@@ -50,19 +57,44 @@ export default function AdminTicketDetail({
   const [priority, setPriority] = useState(ticket.priority);
   const [comment, setComment] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const isProductReviewTicket =
+    ticket.type === "product_review" && ticket.subject_type === "product_draft";
+  const statusOptions = isProductReviewTicket
+    ? ticket.status === "open"
+      ? ["open", ...reviewStatuses]
+      : reviewStatuses
+    : statuses;
 
   const saveTicket = async () => {
     setIsSaving(true);
-    const response = await actionUpdateAdminTicket({
-      uuid: ticket.uuid,
-      status,
-      priority,
-    });
-    setIsSaving(false);
-    if ("error" in response) {
-      toast.error(response.error);
-      return;
+    if (priority !== ticket.priority) {
+      const priorityResponse = await actionUpdateAdminTicket({
+        uuid: ticket.uuid,
+        priority,
+      });
+      if ("error" in priorityResponse) {
+        setIsSaving(false);
+        toast.error(priorityResponse.error);
+        return;
+      }
     }
+
+    if (status !== ticket.status) {
+      const response = isProductReviewTicket
+        ? status === "in_review" ||
+          status === "changes_requested" ||
+          status === "approved"
+          ? await actionReviewProductDraft(ticket.subject_uuid, status)
+          : { error: "Product review tickets cannot use that status." }
+        : await actionUpdateAdminTicket({ uuid: ticket.uuid, status });
+      if ("error" in response) {
+        setIsSaving(false);
+        toast.error(response.error);
+        return;
+      }
+    }
+
+    setIsSaving(false);
     toast.success("Ticket updated.");
     router.refresh();
   };
@@ -173,7 +205,7 @@ export default function AdminTicketDetail({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {statuses.map((value) => (
+                {statusOptions.map((value) => (
                   <SelectItem key={value} value={value}>
                     {value.replaceAll("_", " ")}
                   </SelectItem>

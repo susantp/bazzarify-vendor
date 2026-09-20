@@ -74,9 +74,9 @@ export const ProductDraftSchema = z.object({
     .array(
       z.object({
         uuid: z.uuid(),
-        state: z.enum(["in_review", "changes_requested"]),
+        state: z.enum(["open", "in_review", "changes_requested", "approved"]),
         comment: z.string().nullable(),
-        reviewer_user_uuid: z.uuid(),
+        reviewer_user_uuid: z.uuid().nullable(),
         created_at: z.string().nullable(),
       }),
     )

@@ -23,6 +23,10 @@ const productDraft: IRoute["productDraft"] = {
     path: "/product-management/product-drafts/:uuid/media/:mediaUuid",
     method: "DELETE",
   },
+  review: {
+    path: "/product-management/product-drafts/:uuid/review",
+    method: "PATCH",
+  },
   destroy: {
     path: "/product-management/product-drafts/:uuid",
     method: "DELETE",
