@@ -1,4 +1,6 @@
-import StoreSchema from "@/modules/vendor/domain/schemas/store";
+import StoreSchema, {
+  StoreOnboardingSchema,
+} from "@/modules/vendor/domain/schemas/store";
 import { z } from "zod";
 
 export const AdminUserDetailSchema = z
@@ -14,6 +16,7 @@ export const AdminUserDetailSchema = z
     updated_at: z.string().nullable(),
     roles: z.array(z.string()),
     has_store: z.boolean(),
+    onboarding: StoreOnboardingSchema.nullable().optional(),
     store_status: z.enum(["no_store", "needs_categories", "ready"]),
     store: StoreSchema.extend({
       store_type_name: z.string().nullable().optional(),

@@ -17,6 +17,7 @@ import {
   TCategoryAuthoringProfile,
 } from "@/modules/product.management";
 import { actionGetCategories } from "@/modules/product.management/actions/category";
+import { isStoreProductAuthoringReady } from "@/modules/vendor/domain/schemas/store";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -120,7 +121,7 @@ export default async function VendorCapabilitiesPage() {
     );
   }
 
-  if (authUser.store.product_authoring_ready === false) {
+  if (!isStoreProductAuthoringReady(authUser.store)) {
     return (
       <PageContainer pageTitle="Vendor Capability Profile">
         <Card>
@@ -160,7 +161,7 @@ export default async function VendorCapabilitiesPage() {
       category,
     ): category is TCategory & {
       authoring_profile: TCategoryAuthoringProfile;
-    } => category.authoring_profile !== undefined,
+    } => category.authoring_profile != null,
   );
 
   return (

@@ -13,6 +13,7 @@ import PageContainer from "@/modules/core/components/server/PageContainer";
 import { ThemedButton } from "@/modules/core/components/server/ThemedButton";
 import { getCookieStore } from "@/modules/core/lib/utils.session";
 import SetBusinessAndEmailForm from "@/modules/guest/components/client/registration/SetBusinessAndEmailForm";
+import { isStoreProductAuthoringReady } from "@/modules/vendor/domain/schemas/store";
 import { actionGetStoreTypeOptions } from "@/modules/vendor/domain/store-actions";
 import {
   DEFAULT_STORE_REQUIREMENT_RETURN_PATH,
@@ -40,7 +41,7 @@ export default async function StoreRequiredPage({
   if (userUuid) {
     const authUser = await getAuthUser(userUuid);
     if (authUser && !("error" in authUser) && authUser.store) {
-      if (authUser.store.product_authoring_ready === false) {
+      if (!isStoreProductAuthoringReady(authUser.store)) {
         redirect(buildStoreRemediationPath(safeReturnTo));
       }
 

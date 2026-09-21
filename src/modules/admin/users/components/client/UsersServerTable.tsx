@@ -5,6 +5,10 @@ import { TableColumn } from "@/modules/core/components/client/DynamicTable";
 import ServerDataTable from "@/modules/core/components/client/ServerDataTable";
 import { TServerDataTableMeta } from "@/modules/core/domain/schemas/ServerDataTableMeta";
 
+function formatOnboardingLabel(value: string | undefined): string {
+  return value ? value.replaceAll("_", " ") : "Not available";
+}
+
 const identityColumns: TableColumn<TAdminUserListItem>[] = [
   { key: "name", title: "Name" },
   { key: "email", title: "Email" },
@@ -32,6 +36,22 @@ const vendorColumns: TableColumn<TAdminUserListItem>[] = [
         : value === "needs_categories"
           ? "Needs Categories"
           : "No Store",
+  },
+  {
+    key: "onboarding_state",
+    title: "Onboarding",
+    render: (_, record) =>
+      formatOnboardingLabel(
+        record.onboarding?.state ?? record.store?.onboarding?.state,
+      ),
+  },
+  {
+    key: "onboarding_next_action",
+    title: "Next Action",
+    render: (_, record) =>
+      formatOnboardingLabel(
+        record.onboarding?.next_action ?? record.store?.onboarding?.next_action,
+      ),
   },
   { key: "created_at", title: "Created At" },
 ];

@@ -21,6 +21,7 @@ export default function useProduct() {
     type: "retail",
     box_items: "",
     base_price: "",
+    minimum_order_quantity: "",
     category: "",
     uuid: "",
     highlights: "",

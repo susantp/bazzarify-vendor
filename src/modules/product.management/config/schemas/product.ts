@@ -29,6 +29,10 @@ export const CreateProductSchema = z.object({
     .refine((val) => /^(?:[1-9]\d*|0)(?:\.\d+)?$/.test(val), {
       message: "Base price must be 1 to 9 digits",
     }),
+  minimum_order_quantity: z
+    .string()
+    .regex(/^[1-9]\d*$/, "Minimum order quantity must be at least 1")
+    .optional(),
   description: z.string().refine(isValidRichTextEditorContent, {
     message: "Product description is required",
   }),
@@ -51,6 +55,10 @@ export const UpdateProductSchema = z.object({
     .refine((val) => /^(?:[1-9]\d*|0)(?:\.\d+)?$/.test(val), {
       message: "Base price must be 1 to 9 digits",
     }),
+  minimum_order_quantity: z
+    .string()
+    .regex(/^[1-9]\d*$/, "Minimum order quantity must be at least 1")
+    .optional(),
   description: z.string().refine(isValidRichTextEditorContent, {
     message: "Product description is required",
   }),

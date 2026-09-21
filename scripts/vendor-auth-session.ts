@@ -52,8 +52,24 @@ const VERIFICATION_PASSWORD = "H@nds0me1522";
 const VERIFICATION_HEADER_NAME = "X-Bazarify-Verification";
 const VERIFICATION_HEADER_VALUE = "vendor-auth";
 const PERSONAS: Record<string, PersonaDefinition> = {
-  vendor_no_store: {
+  vendor_admin: {
     credential: "techbizznepal@gmail.com",
+    password: VERIFICATION_PASSWORD,
+  },
+  vendor_no_store: {
+    credential: "vendor.no-store@bazarify.local",
+    password: VERIFICATION_PASSWORD,
+  },
+  vendor_incomplete: {
+    credential: "vendor.store.nocategories@bazarify.local",
+    password: VERIFICATION_PASSWORD,
+  },
+  vendor_ready: {
+    credential: "vendor.store.categories@bazarify.local",
+    password: VERIFICATION_PASSWORD,
+  },
+  vendor_multi_category: {
+    credential: "vendor.store.multiple-categories@bazarify.local",
     password: VERIFICATION_PASSWORD,
   },
   vendor_with_store_no_categories: {
@@ -61,7 +77,7 @@ const PERSONAS: Record<string, PersonaDefinition> = {
     password: VERIFICATION_PASSWORD,
   },
   vendor_with_store_with_categories: {
-    credential: "vendor.store.categories@bazarify.local",
+    credential: "vendor.store.multiple-categories@bazarify.local",
     password: VERIFICATION_PASSWORD,
   },
 };

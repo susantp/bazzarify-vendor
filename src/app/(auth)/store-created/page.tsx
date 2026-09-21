@@ -12,6 +12,7 @@ import {
 import PageContainer from "@/modules/core/components/server/PageContainer";
 import { ThemedButton } from "@/modules/core/components/server/ThemedButton";
 import { getCookieStore } from "@/modules/core/lib/utils.session";
+import { isStoreProductAuthoringReady } from "@/modules/vendor/domain/schemas/store";
 import { actionGetStoreTypeOptions } from "@/modules/vendor/domain/store-actions";
 import { buildStoreRemediationPath } from "@/modules/vendor/domain/storeRequirementNavigation";
 import Link from "next/link";
@@ -28,7 +29,7 @@ export default async function StoreCreatedPage() {
     redirect("/store-required");
   }
 
-  if (authUser.store.product_authoring_ready === false) {
+  if (!isStoreProductAuthoringReady(authUser.store)) {
     redirect(buildStoreRemediationPath());
   }
 

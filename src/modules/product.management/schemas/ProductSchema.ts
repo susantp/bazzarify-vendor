@@ -16,6 +16,12 @@ export const ProductSchema = z
     sku: z.string().min(8).max(32),
     slug: z.string(),
     base_price: z.number().nonnegative(),
+    wholesale_product_detail: z
+      .object({
+        minimum_order_quantity: z.number().int().min(1),
+      })
+      .nullable()
+      .optional(),
     description: z.looseObject({}).nullable(),
     highlights: z.looseObject({}).nullable(),
     box_items: z.string().nullable(),

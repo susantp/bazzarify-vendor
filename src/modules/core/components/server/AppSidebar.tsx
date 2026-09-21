@@ -14,9 +14,10 @@ import SidebarAccountMenu from "@/modules/core/components/client/SidebarAccountM
 import SidebarMenuButtonComponent from "@/modules/core/components/client/SidebarMenuButton";
 import SidebarMenuGroupComponent from "@/modules/core/components/client/SidebarMenuGroup";
 import { TMenuEntry } from "@/modules/core/data";
+import { isStoreProductAuthoringReady } from "@/modules/vendor/domain/schemas/store";
 import { headers } from "next/headers";
 import Image from "next/image";
-import { FaHome, FaImage } from "react-icons/fa";
+import { FaClipboardCheck, FaHome, FaImage } from "react-icons/fa";
 import {
   FaFileImport,
   FaFirstOrder,
@@ -53,6 +54,12 @@ const adminNavigations: TMenuEntry[] = [
   { type: "link", title: "Sliders", path: "/sliders", icon: FaImage },
   { type: "link", title: "Categories", path: "/categories", icon: TbCategory },
   productsGroup,
+  {
+    type: "link",
+    title: "Product reviews",
+    path: "/products/reviews",
+    icon: FaClipboardCheck,
+  },
   { type: "link", title: "Orders", path: "/orders", icon: FaFirstOrder },
   { type: "link", title: "Users", path: "/users", icon: FaUsers },
   { type: "link", title: "Vendors", path: "/vendors", icon: FaStore },
@@ -142,8 +149,9 @@ export async function AppSidebar({ className }: { className?: string }) {
     );
   const storeName = sessionUser?.store?.name?.trim() || null;
   const hasStore = Boolean(sessionUser?.store);
-  const hasBlockedStoreSetup =
-    sessionUser?.store?.product_authoring_ready === false;
+  const hasBlockedStoreSetup = Boolean(
+    sessionUser?.store && !isStoreProductAuthoringReady(sessionUser.store),
+  );
   const vendorIsNotReady = isVendor && (!hasStore || hasBlockedStoreSetup);
   const vendorLandingNavigation: TMenuEntry = vendorIsNotReady
     ? { type: "link", title: "Onboarding", path: "/onboarding", icon: FaStore }

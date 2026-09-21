@@ -1,5 +1,6 @@
 import { ServerDataTableMetaSchema } from "@/modules/core/domain/schemas/ServerDataTableMeta";
 import { SimplePaginatedSchema } from "@/modules/product.management/schemas/SimplePaginated";
+import { StoreOnboardingSchema } from "@/modules/vendor/domain/schemas/store";
 import { z } from "zod";
 
 export const AdminUserStoreSummarySchema = z
@@ -8,6 +9,7 @@ export const AdminUserStoreSummarySchema = z
     name: z.string().nullable(),
     category_count: z.number().int().nonnegative(),
     store_type_name: z.string().nullable().optional(),
+    onboarding: StoreOnboardingSchema.nullable().optional(),
   })
   .strip();
 
@@ -21,6 +23,7 @@ export const AdminUserListItemSchema = z
     created_at: z.string().nullable(),
     roles: z.array(z.string()),
     has_store: z.boolean(),
+    onboarding: StoreOnboardingSchema.nullable().optional(),
     store_status: z.enum(["no_store", "needs_categories", "ready"]),
     store: AdminUserStoreSummarySchema.nullable(),
   })

@@ -13,7 +13,9 @@ import {
   TShowProductPayload,
 } from "@/modules/product.management";
 import { PRODUCT_MANAGEMENT_ROUTES } from "@/modules/product.management/config/routes";
+import { ProductAuthoringContextPayloadSchema } from "@/modules/product.management/schemas/ProductAuthoringSchema";
 import { ProductStoreFilterOptionPayloadSchema } from "@/modules/product.management/schemas/ProductFilterSchema";
+import { z } from "zod";
 
 type ProductActionError = IMetaData & {
   details?: unknown;
@@ -115,11 +117,30 @@ export const actionEditProduct = async (
     const response = await client.get(
       PRODUCT_MANAGEMENT_ROUTES.product.edit.path.replace(":uuid", uuid),
     );
-    const responseData = response.data as ApiResponse<TEditProductPayload>;
-    if (responseData.metaData.error) {
-      return { error: responseData.metaData.error };
+    const parsed = ApiResponseSchema(
+      z
+        .object({
+          categoryContext: ProductAuthoringContextPayloadSchema.nullable(),
+        })
+        .passthrough(),
+    ).safeParse(response.data);
+
+    if (!parsed.success) {
+      throw new Error(
+        `Product edit bootstrap schema validation failed [PRODUCT_AUTHORING_SCHEMA] ${z.prettifyError(parsed.error)}`,
+      );
     }
-    return responseData.data.payload;
+
+    if (parsed.data.metaData.error || parsed.data.data.payload === null) {
+      return {
+        error:
+          typeof parsed.data.metaData.error === "string"
+            ? parsed.data.metaData.error
+            : "Unable to load the product authoring contract.",
+      };
+    }
+
+    return parsed.data.data.payload as TEditProductPayload;
   } catch (error) {
     return handleUnknownError(error);
   }
@@ -162,6 +183,25 @@ export const actionUpdateProductStatus = async (
         uuid,
       ),
       { status },
+    );
+    const responseData = response.data as ApiResponse<{ product: TProduct }>;
+
+    if (responseData.metaData?.error) {
+      return toProductActionError(responseData.metaData);
+    }
+    return responseData.data.payload.product;
+  } catch (error) {
+    return handleUnknownError(error);
+  }
+};
+
+export const actionPublishProduct = async (
+  uuid: string,
+): Promise<TProduct | ProductActionError> => {
+  const client = await authAxiosInstance();
+  try {
+    const response = await client.post(
+      PRODUCT_MANAGEMENT_ROUTES.product.publish.path.replace(":uuid", uuid),
     );
     const responseData = response.data as ApiResponse<{ product: TProduct }>;
 

@@ -8,7 +8,11 @@ import { createAuthCookieSession } from "@/modules/core/lib/utils.session";
 import { NextRequest, NextResponse } from "next/server";
 
 type PersonaName =
+  | "vendor_admin"
   | "vendor_no_store"
+  | "vendor_incomplete"
+  | "vendor_ready"
+  | "vendor_multi_category"
   | "vendor_with_store_no_categories"
   | "vendor_with_store_with_categories";
 
@@ -31,8 +35,24 @@ const personas: Record<
     password: string;
   }
 > = {
-  vendor_no_store: {
+  vendor_admin: {
     credential: "techbizznepal@gmail.com",
+    password: verificationPassword,
+  },
+  vendor_no_store: {
+    credential: "vendor.no-store@bazarify.local",
+    password: verificationPassword,
+  },
+  vendor_incomplete: {
+    credential: "vendor.store.nocategories@bazarify.local",
+    password: verificationPassword,
+  },
+  vendor_ready: {
+    credential: "vendor.store.categories@bazarify.local",
+    password: verificationPassword,
+  },
+  vendor_multi_category: {
+    credential: "vendor.store.multiple-categories@bazarify.local",
     password: verificationPassword,
   },
   vendor_with_store_no_categories: {
@@ -40,7 +60,7 @@ const personas: Record<
     password: verificationPassword,
   },
   vendor_with_store_with_categories: {
-    credential: "vendor.store.categories@bazarify.local",
+    credential: "vendor.store.multiple-categories@bazarify.local",
     password: verificationPassword,
   },
 };

@@ -27,7 +27,7 @@ export const SessionUserSchema = UserSchema.pick({
   phone_verified_at: true,
 })
   .extend({
-    store: StoreSchema.strip().nullable(),
+    store: StoreSchema.nullable(),
     roles: z.array(
       RoleSchema.pick({
         name: true,

@@ -12,6 +12,7 @@ import {
 import PageContainer from "@/modules/core/components/server/PageContainer";
 import { ThemedButton } from "@/modules/core/components/server/ThemedButton";
 import { getCookieStore } from "@/modules/core/lib/utils.session";
+import { isStoreProductAuthoringReady } from "@/modules/vendor/domain/schemas/store";
 import {
   DEFAULT_STORE_REQUIREMENT_RETURN_PATH,
   buildStoreRequirementPath,
@@ -48,7 +49,7 @@ export default async function StoreRemediationPage({
     redirect(buildStoreRequirementPath(safeReturnTo ?? "/products"));
   }
 
-  if (authUser.store.product_authoring_ready !== false) {
+  if (isStoreProductAuthoringReady(authUser.store)) {
     redirect(safeReturnTo ?? "/products");
   }
 

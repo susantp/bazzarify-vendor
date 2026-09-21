@@ -5,6 +5,7 @@ import {
   getSessionUserUUID,
 } from "@/modules/auth/data/lib/auth-lib";
 import { getCookieStore } from "@/modules/core/lib/utils.session";
+import { isStoreProductAuthoringReady } from "@/modules/vendor/domain/schemas/store";
 import {
   buildStoreRemediationPath,
   buildStoreRequirementPath,
@@ -33,7 +34,7 @@ export async function requireVendorStoreGuard(returnTo: string): Promise<void> {
     redirect(buildStoreRequirementPath(returnTo));
   }
 
-  if (authUser.store.product_authoring_ready === false) {
+  if (!isStoreProductAuthoringReady(authUser.store)) {
     redirect(buildStoreRemediationPath(returnTo));
   }
 }

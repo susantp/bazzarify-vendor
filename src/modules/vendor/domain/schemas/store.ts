@@ -1,5 +1,14 @@
 import { z } from "zod";
 
+export const StoreOnboardingSchema = z
+  .object({
+    uuid: z.uuid(),
+    state: z.string(),
+    next_action: z.string(),
+    product_authoring_ready: z.boolean(),
+  })
+  .strip();
+
 export const StoreSchema = z
   .object({
     uuid: z.uuid(),
@@ -19,8 +28,10 @@ export const StoreSchema = z
     deleted_at: z.string().optional().nullable(),
     category_count: z.number().int().nonnegative().optional(),
     product_authoring_ready: z.boolean().optional(),
+    onboarding: StoreOnboardingSchema.optional(),
   })
   .strip();
+
 export const SessionStoreSchema = StoreSchema.pick({
   name: true,
   slug: true,
@@ -34,7 +45,19 @@ export const SessionStoreSchema = StoreSchema.pick({
   country: true,
   category_count: true,
   product_authoring_ready: true,
+  onboarding: true,
 }).strip();
+
+export function isStoreProductAuthoringReady(store: {
+  product_authoring_ready?: boolean;
+  onboarding?: { product_authoring_ready: boolean };
+}): boolean {
+  return (
+    store.product_authoring_ready ??
+    store.onboarding?.product_authoring_ready ??
+    false
+  );
+}
 
 export default StoreSchema;
 export type TUser = z.infer<typeof SessionStoreSchema>;

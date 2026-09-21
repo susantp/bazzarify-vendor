@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "NODE_OPTIONS='--inspect=0.0.0.0' bun --bun next dev --turbopack",
-    "build": "bun --bun next build",
+    "build": "NODE_ENV=production bun --bun next build --webpack",
     "start": "bun --bun next start",
     "lint": "bunx eslint .",
     "lint:fix": "bunx eslint . --fix",

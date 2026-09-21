@@ -6,6 +6,7 @@ import {
   TCategoryAuthoringProfile,
   TEditProductPayload,
   TImage,
+  TProductAuthoringSchema,
   TProductForm,
   TSpecification,
   TVariant,
@@ -33,6 +34,7 @@ import {
   loadProductCategoryContext,
   prepareProductSubmission,
 } from "@/modules/product.management/utils/productAuthoring";
+import { isAuthoringFieldRenderable } from "@/modules/product.management/utils/productAuthoringRenderer";
 import { OPTIONLESS_VARIANT_KEY } from "@/modules/product.management/utils/productForm";
 import { lexicalJsonToHtml } from "@/modules/product.management/utils/richTextEditorUtils";
 import {
@@ -65,6 +67,8 @@ export default function useProductAuthoring({
   const router = useRouter();
   const [authoringProfile, setAuthoringProfile] =
     useState<TCategoryAuthoringProfile | null>(null);
+  const [authoringSchema, setAuthoringSchema] =
+    useState<TProductAuthoringSchema | null>(null);
   const [categoryAttributes, setCategoryAttributes] = useState<TAttribute[]>(
     [],
   );
@@ -327,6 +331,8 @@ export default function useProductAuthoring({
     category.setCategorySpecifications(categoryContext.specifications ?? []);
     setCategoryAttributes(categoryContext.attributes ?? []);
     setAuthoringProfile(categoryContext.authoringProfile);
+    setAuthoringSchema(categoryContext.authoringSchema);
+    product.handleProductForm("type", categoryContext.authoringProfile.type);
     category.setShowDropdown(false);
     clearSubmissionFieldError("category");
   };
@@ -386,6 +392,7 @@ export default function useProductAuthoring({
       setCategorySpecifications: category.setCategorySpecifications,
       setCategoryAttributes,
       setAuthoringProfile,
+      setAuthoringSchema,
       setSelectedSpecifications: setSpecificationValues,
       setVariantData: variant.setVariantData,
       setVariantSelections,
@@ -409,6 +416,7 @@ export default function useProductAuthoring({
     product.setProductForm,
     setCategoryAttributes,
     setAuthoringProfile,
+    setAuthoringSchema,
     setSpecificationValues,
     setVariantImageIdMap,
     setVariantSelections,
@@ -421,7 +429,15 @@ export default function useProductAuthoring({
       return;
     }
 
-    if (mode === "create" && product.uploadedProductImages.length === 0) {
+    const imagesEnabled =
+      authoringSchema === null ||
+      isAuthoringFieldRenderable(authoringSchema, "images");
+
+    if (
+      mode === "create" &&
+      imagesEnabled &&
+      product.uploadedProductImages.length === 0
+    ) {
       const feedback: {
         summary: string;
         fieldErrors: Record<string, string[]>;
@@ -439,7 +455,8 @@ export default function useProductAuthoring({
     if (
       mode === "update" &&
       (!product.productForm.uuid ||
-        (!product.existingProductImages.length &&
+        (imagesEnabled &&
+          !product.existingProductImages.length &&
           !product.uploadedProductImages.length))
     ) {
       const feedback: {
@@ -479,7 +496,7 @@ export default function useProductAuthoring({
         : prepareProductSubmission({
             schema: UpdateProductSchema,
             product: {
-              type: "retail",
+              type: product.productForm.type,
               uuid: product.productForm.uuid,
               sku: product.productForm.sku,
               name: product.productForm.name,
@@ -487,6 +504,8 @@ export default function useProductAuthoring({
               description: product.productForm.description,
               highlights: product.productForm.highlights,
               box_items: product.productForm.box_items,
+              minimum_order_quantity:
+                product.productForm.minimum_order_quantity,
             },
             productSku: product.productForm.sku,
             committedCategoryUuid: category.committedCategory?.uuid,
@@ -517,7 +536,7 @@ export default function useProductAuthoring({
         : prepareProductSubmission({
             schema: UpdateProductSchema,
             product: {
-              type: "retail",
+              type: product.productForm.type,
               uuid: product.productForm.uuid,
               sku: product.productForm.sku,
               name: product.productForm.name,
@@ -525,6 +544,8 @@ export default function useProductAuthoring({
               description: product.productForm.description,
               highlights: product.productForm.highlights,
               box_items: product.productForm.box_items,
+              minimum_order_quantity:
+                product.productForm.minimum_order_quantity,
             },
             productSku: product.productForm.sku,
             committedCategoryUuid: category.committedCategory?.uuid,
@@ -608,6 +629,7 @@ export default function useProductAuthoring({
 
   return {
     authoringProfile,
+    authoringSchema,
     basicState: {
       productForm: product.productForm,
       onProductFormInputChange,
@@ -707,6 +729,7 @@ interface HydrateEditProductArgs {
   setAuthoringProfile: Dispatch<
     SetStateAction<TCategoryAuthoringProfile | null>
   >;
+  setAuthoringSchema: Dispatch<SetStateAction<TProductAuthoringSchema | null>>;
   setSelectedSpecifications: (specifications: Record<string, string>) => void;
   setVariantData: Dispatch<SetStateAction<TVariantDataMap>>;
   setVariantSelections: Dispatch<SetStateAction<Record<string, string[]>>>;
@@ -730,6 +753,7 @@ function hydrateEditProduct({
   setCategorySpecifications,
   setCategoryAttributes,
   setAuthoringProfile,
+  setAuthoringSchema,
   setSelectedSpecifications,
   setVariantData,
   setVariantSelections,
@@ -767,7 +791,7 @@ function hydrateEditProduct({
   setExistingProductImages(existingProductImages);
   setExistingImageIdMap(existingImageIdMap);
   setProductForm({
-    type: "retail",
+    type: product.type,
     sku: product.sku,
     name: product.name,
     uuid: product.uuid,
@@ -778,6 +802,11 @@ function hydrateEditProduct({
       product.base_price === undefined || product.base_price === null
         ? ""
         : String(product.base_price),
+    minimum_order_quantity:
+      product.wholesale_product_detail?.minimum_order_quantity === undefined ||
+      product.wholesale_product_detail?.minimum_order_quantity === null
+        ? ""
+        : String(product.wholesale_product_detail.minimum_order_quantity),
   });
   setSelectedSpecifications(product.specifications ?? {});
 
@@ -785,6 +814,7 @@ function hydrateEditProduct({
 
   if (!categoryContext) {
     setAuthoringProfile(null);
+    setAuthoringSchema(null);
     return;
   }
 
@@ -804,6 +834,7 @@ function hydrateEditProduct({
   setCategorySpecifications(categorySpecifications);
   setCategoryAttributes(categoryAttributes);
   setAuthoringProfile(categoryContext.authoringProfile);
+  setAuthoringSchema(categoryContext.authoringSchema);
 
   const optionlessVariant = getOptionlessVariant(product.variants);
   if (optionlessVariant) {

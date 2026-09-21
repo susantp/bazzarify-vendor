@@ -24,6 +24,30 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
+const DEV_LOGIN_PERSONAS = [
+  { label: "Admin vendor", credential: "techbizznepal@gmail.com" },
+  {
+    label: "Vendor without store",
+    credential: "vendor.no-store@bazarify.local",
+  },
+  {
+    label: "Incomplete vendor",
+    credential: "vendor.store.nocategories@bazarify.local",
+  },
+  {
+    label: "Ready vendor",
+    credential: "vendor.store.categories@bazarify.local",
+  },
+] as const;
+
+const verificationPassword = "H@nds0me1522";
+
+function isLocalEnvironment(): boolean {
+  return ["development", "local", "dev"].includes(
+    process.env.NEXT_PUBLIC_ENVIRONMENT ?? process.env.NODE_ENV ?? "",
+  );
+}
+
 export default function LoginForm() {
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(LoginFormSchema),
@@ -64,23 +88,28 @@ export default function LoginForm() {
     void runLogin(data);
   }
 
-  function handleDevLogin() {
+  function handleDevLogin(credential: string) {
     void runLogin({
-      credential: "techbizznepal@gmail.com",
-      password: "H@nds0me1522",
+      credential,
+      password: verificationPassword,
     });
   }
 
   return (
     <>
-      {process.env.NODE_ENV == "development" ? (
-        <ThemedButton
-          type="button"
-          onClick={handleDevLogin}
-          className="text-md w-full py-6"
-        >
-          Dev Login
-        </ThemedButton>
+      {isLocalEnvironment() ? (
+        <div className="flex w-full flex-col gap-2">
+          {DEV_LOGIN_PERSONAS.map((persona) => (
+            <ThemedButton
+              key={persona.credential}
+              type="button"
+              onClick={() => handleDevLogin(persona.credential)}
+              className="text-md w-full py-6"
+            >
+              Dev Login · {persona.label}
+            </ThemedButton>
+          ))}
+        </div>
       ) : null}
       <FormTitle
         label="Sign In"

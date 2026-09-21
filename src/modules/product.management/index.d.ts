@@ -1,7 +1,14 @@
 import type { TUser } from "@/modules/auth/domain/schemas/UserSchema";
 import type { TServerDataTableMeta } from "@/modules/core/domain/schemas/ServerDataTableMeta";
+import type { TProductAuthoringSchema } from "@/modules/product.management/schemas/ProductAuthoringSchema";
 import type { SerializedEditorState } from "lexical";
 import { ChangeEvent, Dispatch, ReactNode, SetStateAction } from "react";
+export type { TProductAuthoringSchema } from "@/modules/product.management/schemas/ProductAuthoringSchema";
+export type {
+  TProductDraft,
+  TProductDraftMedia,
+  TProductDraftStep,
+} from "@/modules/product.management/schemas/ProductDraftSchema";
 
 export type TSpecification = {
   uuid: string;
@@ -38,9 +45,10 @@ export type TProductAuthoringCapability =
   | "base_price"
   | "specifications"
   | "images"
-  | "import";
+  | "import"
+  | "minimum_order_quantity";
 export type TCategoryAuthoringProfile = {
-  type: "retail";
+  type: "retail" | "wholesale";
   status: "active";
   capabilities: Record<TProductAuthoringCapability, boolean>;
   unavailable_reasons: Partial<Record<TProductAuthoringCapability, string>>;
@@ -67,6 +75,9 @@ export type TProduct = {
   images: TImage[];
   specifications: Record<string, string>;
   variants: TVariant[];
+  wholesale_product_detail?: {
+    minimum_order_quantity: number;
+  } | null;
   status_text?: string;
   status?: number;
   created_at?: string | null;
@@ -83,6 +94,7 @@ export interface TProductForm {
   uuid?: string;
   name: string;
   base_price: string;
+  minimum_order_quantity: string;
   description: string;
   highlights: string;
   box_items: string;
@@ -320,6 +332,7 @@ export type TCategoryAuthoringContextPayload = {
   specifications: TSpecification[];
   attributes: TAttribute[];
   authoringProfile: TCategoryAuthoringProfile;
+  authoringSchema: TProductAuthoringSchema;
 };
 export interface IPaginatedData<T> {
   current_page: number;
@@ -441,6 +454,7 @@ export interface ProductOptionModeState {
 
 export interface ProductAuthoringController {
   authoringProfile: TCategoryAuthoringProfile | null;
+  authoringSchema: TProductAuthoringSchema | null;
   basicState: ProductAuthoringBasicState;
   categoryState: ProductAuthoringCategoryState;
   mediaState: ProductAuthoringMediaState;
