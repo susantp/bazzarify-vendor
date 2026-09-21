@@ -124,10 +124,10 @@ export const productStatusTransitions = (
     case PRODUCT_STATUS.PENDING:
       return [
         {
-          label: "Approve & Publish",
+          label: "Publish",
           status: PRODUCT_STATUS.ACTIVE,
           tone: "primary",
-          description: "Approve and publish this product.",
+          description: "Make this approved product visible in the storefront.",
         },
         {
           label: "Move to Draft",

@@ -8,6 +8,11 @@ import { IPageParams } from "@/modules/core";
 import BackLinkButton from "@/modules/core/components/server/BackLinkButton";
 import PageContainer from "@/modules/core/components/server/PageContainer";
 
+import {
+  getAuthUser,
+  getSessionUserUUID,
+} from "@/modules/auth/data/lib/auth-lib";
+import { getCookieStore } from "@/modules/core/lib/utils.session";
 import { actionEditProduct } from "@/modules/product.management/actions/product";
 import ProductInspectionView from "@/modules/product.management/components/client/product/ProductInspectionView";
 import { requireVendorStoreGuard } from "@/modules/vendor/domain/requireVendorStoreGuard";
@@ -49,5 +54,19 @@ export default async function Page({ params }: IPageParams) {
     );
   }
 
-  return <ProductInspectionView productPayload={productPayload} />;
+  const userUuid = await getSessionUserUUID(await getCookieStore());
+  const authUser = userUuid ? await getAuthUser(userUuid) : null;
+  const canPublish =
+    authUser && !("error" in authUser)
+      ? authUser.roles.some(
+          (role) => role.name === "admin" || role.name === "super-admin",
+        )
+      : false;
+
+  return (
+    <ProductInspectionView
+      productPayload={productPayload}
+      canPublish={canPublish}
+    />
+  );
 }
