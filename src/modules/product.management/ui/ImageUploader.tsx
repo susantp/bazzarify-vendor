@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import type { TProductDraftMedia } from "@/modules/product.management";
 import {
   MAX_FILE_SIZE_MB,
   MAX_PRODUCT_IMAGES_COUNT,
@@ -10,8 +11,11 @@ import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 interface ImageUploadProps {
-  onImageSelect: (files: File[]) => void;
+  onImageSelect?: (files: File[]) => void;
   initialImages?: string[];
+  stagedImages?: TProductDraftMedia[];
+  onStageImage?: (file: File) => Promise<boolean>;
+  onRemoveStaged?: (uuid: string) => Promise<boolean>;
   onRemoveExisting?: (url: string) => Promise<boolean>;
   onExistingListChange?: (urls: string[]) => void;
   invalid?: boolean;
@@ -26,6 +30,9 @@ type PreviewItem = {
 export default function ImageUploader({
   onImageSelect,
   initialImages = [],
+  stagedImages = [],
+  onStageImage,
+  onRemoveStaged,
   onRemoveExisting,
   onExistingListChange,
   invalid = false,
@@ -35,6 +42,7 @@ export default function ImageUploader({
   const [previews, setPreviews] = useState<PreviewItem[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [brokenUrls, setBrokenUrls] = useState<Record<string, boolean>>({});
+  const [isStaging, setIsStaging] = useState(false);
 
   // When initialImages change, merge existing URLs with current new previews; trim to max
   useEffect(() => {
@@ -100,7 +108,6 @@ export default function ImageUploader({
     }
 
     const newValidFiles: File[] = [];
-    const newPreviews: PreviewItem[] = [];
 
     for (const file of uniqueIncoming) {
       if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
@@ -113,18 +120,19 @@ export default function ImageUploader({
       const isValid = await validateImage(file);
       if (!isValid) continue;
 
-      const url = URL.createObjectURL(file);
       newValidFiles.push(file);
-      newPreviews.push({ url, revoke: true });
     }
 
-    if (previews.length + newPreviews.length > MAX_PRODUCT_IMAGES_COUNT) {
+    if (
+      previews.length +
+        (onStageImage ? stagedImages.length : 0) +
+        newValidFiles.length >
+      MAX_PRODUCT_IMAGES_COUNT
+    ) {
       toast.error(
         `Maximum ${MAX_PRODUCT_IMAGES_COUNT} images allowed per product.`,
       );
       event.target.value = "";
-      // Revoke newly created URLs since we are discarding them
-      newPreviews.forEach((p) => p.revoke && URL.revokeObjectURL(p.url));
       return;
     }
     if (newValidFiles.length === 0) {
@@ -133,12 +141,33 @@ export default function ImageUploader({
       return;
     }
 
+    if (onStageImage) {
+      setIsStaging(true);
+      try {
+        for (const file of newValidFiles) {
+          const staged = await onStageImage(file);
+          if (!staged) {
+            toast.error(`Unable to stage ${file.name}.`);
+          }
+        }
+      } finally {
+        setIsStaging(false);
+        event.target.value = "";
+      }
+      return;
+    }
+
+    const newPreviews = newValidFiles.map((file) => ({
+      url: URL.createObjectURL(file),
+      revoke: true,
+    }));
+
     const updatedPreviews = [...previews, ...newPreviews];
     const updatedFiles = [...selectedFiles, ...newValidFiles];
 
     setPreviews(updatedPreviews);
     setSelectedFiles(updatedFiles);
-    onImageSelect(updatedFiles);
+    onImageSelect?.(updatedFiles);
     // Clear after success so re-selecting the same file triggers onChange
     event.target.value = "";
   };
@@ -171,7 +200,7 @@ export default function ImageUploader({
       if (priorRevokeCount >= 0 && priorRevokeCount < newFiles.length) {
         newFiles.splice(priorRevokeCount, 1);
         setSelectedFiles(newFiles);
-        onImageSelect(newFiles);
+        onImageSelect?.(newFiles);
       }
     }
 
@@ -182,6 +211,17 @@ export default function ImageUploader({
         .map((p) => p.url);
       onExistingListChange(existingUrls);
     }
+  };
+
+  const handleRemoveStagedImage = async (uuid: string) => {
+    if (!onRemoveStaged) return;
+    await onRemoveStaged(uuid);
+  };
+
+  const formatBytes = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   return (
@@ -199,9 +239,37 @@ export default function ImageUploader({
           accept="image/*"
           multiple
           onChange={handleFileChange}
+          disabled={isStaging}
           className="hidden"
         />
         <div className="flex flex-wrap gap-4">
+          {stagedImages.map((image) => (
+            <div
+              key={image.uuid}
+              className="relative flex h-20 w-44 items-center gap-2 rounded border px-2"
+            >
+              <div className="min-w-0">
+                <p
+                  className="truncate text-xs font-medium"
+                  title={image.original_name}
+                >
+                  {image.original_name}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {formatBytes(image.size)} · {image.status}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleRemoveStagedImage(image.uuid)}
+                disabled={isStaging}
+                aria-label={`Remove ${image.original_name}`}
+                className="absolute -top-2 -right-2 rounded-full bg-white p-1 shadow"
+              >
+                <X className="h-4 w-4 text-red-500" />
+              </button>
+            </div>
+          ))}
           {previews.map((p, index) => (
             <div key={index} className="relative">
               {brokenUrls[p.url] ? (
@@ -230,10 +298,17 @@ export default function ImageUploader({
             </div>
           ))}
         </div>
-        <div onClick={handleIconClick}>
+        <div
+          onClick={isStaging ? undefined : handleIconClick}
+          aria-disabled={isStaging}
+          className={cn(isStaging && "cursor-wait opacity-60")}
+        >
           <CirclePlus width={80} height={80} />
         </div>
       </div>
+      {isStaging && (
+        <p className="mt-3 text-sm text-muted-foreground">Saving images…</p>
+      )}
       {errorMessage && (
         <p className="mt-3 text-sm text-destructive">{errorMessage}</p>
       )}

@@ -17,7 +17,7 @@ import { TMenuEntry } from "@/modules/core/data";
 import { isStoreProductAuthoringReady } from "@/modules/vendor/domain/schemas/store";
 import { headers } from "next/headers";
 import Image from "next/image";
-import { FaHome, FaImage } from "react-icons/fa";
+import { FaClipboardCheck, FaHome, FaImage } from "react-icons/fa";
 import {
   FaFileImport,
   FaFirstOrder,
@@ -54,6 +54,12 @@ const adminNavigations: TMenuEntry[] = [
   { type: "link", title: "Sliders", path: "/sliders", icon: FaImage },
   { type: "link", title: "Categories", path: "/categories", icon: TbCategory },
   productsGroup,
+  {
+    type: "link",
+    title: "Product reviews",
+    path: "/products/reviews",
+    icon: FaClipboardCheck,
+  },
   { type: "link", title: "Orders", path: "/orders", icon: FaFirstOrder },
   { type: "link", title: "Users", path: "/users", icon: FaUsers },
   { type: "link", title: "Vendors", path: "/vendors", icon: FaStore },

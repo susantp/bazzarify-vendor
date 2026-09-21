@@ -4,6 +4,11 @@ import type { TProductAuthoringSchema } from "@/modules/product.management/schem
 import type { SerializedEditorState } from "lexical";
 import { ChangeEvent, Dispatch, ReactNode, SetStateAction } from "react";
 export type { TProductAuthoringSchema } from "@/modules/product.management/schemas/ProductAuthoringSchema";
+export type {
+  TProductDraft,
+  TProductDraftMedia,
+  TProductDraftStep,
+} from "@/modules/product.management/schemas/ProductDraftSchema";
 
 export type TSpecification = {
   uuid: string;

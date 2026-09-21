@@ -68,9 +68,13 @@ import {
   TProduct,
   TVariant,
 } from "@/modules/product.management";
-import { actionUpdateProductStatus } from "@/modules/product.management/actions/product";
+import {
+  actionPublishProduct,
+  actionUpdateProductStatus,
+} from "@/modules/product.management/actions/product";
 import { resolveStorageImageUrl } from "@/modules/product.management/utils/imageUrl";
 import {
+  PRODUCT_STATUS,
   productStatusBadge,
   productStatusTransitions,
 } from "@/modules/product.management/utils/productStatusBadge";
@@ -81,6 +85,7 @@ import {
 
 interface Props {
   productPayload: TEditProductPayload;
+  canPublish?: boolean;
 }
 
 const formatDate = (value: string | null | undefined): string => {
@@ -90,22 +95,6 @@ const formatDate = (value: string | null | undefined): string => {
   } catch {
     return value;
   }
-};
-
-const relativeTime = (value: string | null | undefined): string => {
-  if (!value) return "—";
-  const then = new Date(value).getTime();
-  if (Number.isNaN(then)) return formatDate(value);
-  const diffMs = Date.now() - then;
-  const sec = Math.round(diffMs / 1000);
-  if (Math.abs(sec) < 60) return `${sec}s ago`;
-  const min = Math.round(sec / 60);
-  if (Math.abs(min) < 60) return `${min}m ago`;
-  const hr = Math.round(min / 60);
-  if (Math.abs(hr) < 24) return `${hr}h ago`;
-  const day = Math.round(hr / 24);
-  if (Math.abs(day) < 30) return `${day}d ago`;
-  return formatDate(value);
 };
 
 const CopyButton = ({ value, label }: { value: string; label?: string }) => {
@@ -271,7 +260,10 @@ const VariantAttributeChips = ({ variant }: { variant: TVariant }) => {
   );
 };
 
-export default function ProductInspectionView({ productPayload }: Props) {
+export default function ProductInspectionView({
+  productPayload,
+  canPublish = false,
+}: Props) {
   const [product, setProduct] = useState<TProduct>(productPayload.product);
   const [isPending, startTransition] = useTransition();
   const [pendingStatus, setPendingStatus] = useState<number | null>(null);
@@ -279,12 +271,14 @@ export default function ProductInspectionView({ productPayload }: Props) {
   const ancestors = productPayload.categoryAncestors;
   const categoryContext = productPayload.categoryContext;
   const statusBadge = productStatusBadge(product.status);
-  const transitions = productStatusTransitions(product.status);
+  const transitions = productStatusTransitions(product.status).filter(
+    (transition) => transition.status !== PRODUCT_STATUS.ACTIVE || canPublish,
+  );
   const imageBaseUrl = product.image_base_url ?? null;
 
   const imageUrls = useMemo(
     () =>
-      product.images.map((image) => ({
+      (product.images ?? []).map((image) => ({
         image,
         url: resolveStorageImageUrl(image, imageBaseUrl),
       })),
@@ -307,6 +301,35 @@ export default function ProductInspectionView({ productPayload }: Props) {
 
       setProduct(result as TProduct);
       toast.success(`${label} — status updated`);
+    });
+  };
+
+  const handlePublish = () => {
+    if (isPending || product.status !== PRODUCT_STATUS.PENDING || !canPublish) {
+      return;
+    }
+
+    setPendingStatus(PRODUCT_STATUS.ACTIVE);
+    startTransition(async () => {
+      const result = await actionPublishProduct(product.uuid);
+      setPendingStatus(null);
+
+      if (result && typeof result === "object" && "error" in result) {
+        const err = result as IMetaData;
+        toast.error(err.error ?? "Failed to publish product");
+        return;
+      }
+
+      const publishedProduct = result as TProduct;
+      setProduct({
+        ...product,
+        ...publishedProduct,
+        images: publishedProduct.images ?? product.images,
+        variants: publishedProduct.variants ?? product.variants,
+        specifications:
+          publishedProduct.specifications ?? product.specifications,
+      });
+      toast.success("Product published successfully");
     });
   };
 
@@ -377,7 +400,14 @@ export default function ProductInspectionView({ productPayload }: Props) {
                     key={transition.status}
                     onSelect={(event) => {
                       event.preventDefault();
-                      handleStatusChange(transition.status, transition.label);
+                      if (
+                        product.status === PRODUCT_STATUS.PENDING &&
+                        transition.status === PRODUCT_STATUS.ACTIVE
+                      ) {
+                        handlePublish();
+                      } else {
+                        handleStatusChange(transition.status, transition.label);
+                      }
                     }}
                     disabled={isPending}
                     className={cn(
@@ -484,7 +514,7 @@ export default function ProductInspectionView({ productPayload }: Props) {
                   <KeyValue label="Created">
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span>{relativeTime(product.created_at)}</span>
+                        <span>{formatDate(product.created_at)}</span>
                       </TooltipTrigger>
                       <TooltipContent>
                         {formatDate(product.created_at)}
@@ -499,7 +529,7 @@ export default function ProductInspectionView({ productPayload }: Props) {
                   <KeyValue label="Updated">
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span>{relativeTime(product.updated_at)}</span>
+                        <span>{formatDate(product.updated_at)}</span>
                       </TooltipTrigger>
                       <TooltipContent>
                         {formatDate(product.updated_at)}
@@ -608,7 +638,7 @@ export default function ProductInspectionView({ productPayload }: Props) {
                 Images
               </CardTitle>
               <span className="text-xs text-muted-foreground">
-                {product.images.length} total
+                {product.images?.length ?? 0} total
               </span>
             </CardHeader>
             <CardContent>

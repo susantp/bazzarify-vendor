@@ -20,6 +20,8 @@ export const PRODUCT_AUTHORING_RENDERER_REGISTRY = {
 export type ProductAuthoringRendererKey =
   (typeof PRODUCT_AUTHORING_RENDERER_REGISTRY)[keyof typeof PRODUCT_AUTHORING_RENDERER_REGISTRY];
 
+export type ProductAuthoringMode = "create" | "update";
+
 export const resolveAuthoringRenderer = (
   schema: TProductAuthoringSchema,
   fieldKey: string,
@@ -32,3 +34,10 @@ export const isAuthoringFieldRenderable = (
   schema: TProductAuthoringSchema,
   fieldKey: string,
 ): boolean => resolveAuthoringRenderer(schema, fieldKey) !== null;
+
+export const isAuthoringFieldVisible = (
+  schema: TProductAuthoringSchema | null,
+  fieldKey: string,
+  mode: ProductAuthoringMode,
+): boolean =>
+  schema ? isAuthoringFieldRenderable(schema, fieldKey) : mode === "create";

@@ -19,6 +19,9 @@ const product: IRoute["product"] = {
   updateStatus: {
     path: "/product-management/products/:uuid/status",
   },
+  publish: {
+    path: "/product-management/products/:uuid/publish",
+  },
   storeOptions: {
     path: "/product-management/products/store-options",
   },

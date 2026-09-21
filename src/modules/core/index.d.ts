@@ -40,6 +40,7 @@ export type TEntities =
   | "order"
   | "category"
   | "product"
+  | "productDraft"
   | "variant"
   | "image"
   | "attribute"
@@ -47,7 +48,8 @@ export type TEntities =
   | "login"
   | "register"
   | "reset"
-  | "user";
+  | "user"
+  | "adminTicket";
 
 export interface RouteConfig {
   path: string;

@@ -195,6 +195,25 @@ export const actionUpdateProductStatus = async (
   }
 };
 
+export const actionPublishProduct = async (
+  uuid: string,
+): Promise<TProduct | ProductActionError> => {
+  const client = await authAxiosInstance();
+  try {
+    const response = await client.post(
+      PRODUCT_MANAGEMENT_ROUTES.product.publish.path.replace(":uuid", uuid),
+    );
+    const responseData = response.data as ApiResponse<{ product: TProduct }>;
+
+    if (responseData.metaData?.error) {
+      return toProductActionError(responseData.metaData);
+    }
+    return responseData.data.payload.product;
+  } catch (error) {
+    return handleUnknownError(error);
+  }
+};
+
 export const actionUpdateProducts = async (
   payload: FormData,
   uuid: string,
