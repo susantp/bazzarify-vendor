@@ -22,6 +22,7 @@ import { actionGetSpecifications } from "@/modules/product.management/actions/sp
 import CategoryAttributesCard from "@/modules/product.management/ui/CategoryAttributesCard";
 import CategoryCard from "@/modules/product.management/ui/CategoryCard";
 import CategorySpecificationsCard from "@/modules/product.management/ui/CategorySpecificationsCard";
+import AuthoringActivationCard from "@/modules/product.management/components/client/category/AuthoringActivationCard";
 import { resolveStorageImageUrl } from "@/modules/product.management/utils/imageUrl";
 import { keepPreviousData, useQueries } from "@tanstack/react-query";
 import Image from "next/image";
@@ -441,6 +442,7 @@ export default function View({ slug }: { slug: string }) {
         }
         isLoading={isCategoryLoading}
       />
+      <AuthoringActivationCard slug={slug} />
       <CategoryIconPanel
         category={currentCategory}
         isLoading={isCategoryLoading}
