@@ -45,7 +45,7 @@ export default function ProductDetail({
   return (
     <>
       {rendersField("description") && (
-        <>
+        <div id="description" data-authoring-field="description">
           <Label>Description</Label>
           <ProductRichTextEditor
             name="description"
@@ -62,10 +62,10 @@ export default function ProductDetail({
           {descriptionError && (
             <p className="text-sm text-destructive">{descriptionError}</p>
           )}
-        </>
+        </div>
       )}
       {rendersField("highlights") && (
-        <>
+        <div id="highlights" data-authoring-field="highlights">
           <Label>Highlights</Label>
           <ProductRichTextEditor
             name="highlights"
@@ -82,10 +82,10 @@ export default function ProductDetail({
           {highlightsError && (
             <p className="text-sm text-destructive">{highlightsError}</p>
           )}
-        </>
+        </div>
       )}
       {rendersField("box_items") && (
-        <>
+        <div id="box_items" data-authoring-field="box_items">
           <Label>What&apos;s in the box?</Label>
           <Input
             placeholder="comma seperated items in the box"
@@ -98,7 +98,7 @@ export default function ProductDetail({
           {boxItemsError && (
             <p className="text-sm text-destructive">{boxItemsError}</p>
           )}
-        </>
+        </div>
       )}
     </>
   );

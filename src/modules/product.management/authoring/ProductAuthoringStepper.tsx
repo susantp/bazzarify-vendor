@@ -16,8 +16,8 @@ export default function ProductAuthoringStepper({
   onSelect,
 }: ProductAuthoringStepperProps) {
   return (
-    <nav aria-label="Product authoring progress" className="mb-6">
-      <ol className="grid gap-2 md:grid-cols-5">
+    <nav aria-label="Product authoring progress">
+      <ol className="grid gap-2">
         {steps.map((step) => {
           const isCurrent = step.key === currentStep;
           const isLocked = step.status === "locked";
@@ -34,6 +34,7 @@ export default function ProductAuthoringStepper({
                 )}
                 disabled={isLocked || !onSelect}
                 onClick={() => onSelect?.(step.key)}
+                aria-current={isCurrent ? "step" : undefined}
                 title={
                   isLocked
                     ? (step.lock_reason ?? "Complete the previous step first.")

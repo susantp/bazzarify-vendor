@@ -123,7 +123,12 @@ export default function AttributeSelector({
             wouldAddNewDimension && activeAttrCount >= attributeCap;
 
           return (
-            <div key={attr.uuid} className="space-y-3 rounded-lg border p-4">
+            <div
+              id={`attribute-${attr.uuid}`}
+              data-authoring-field={`attribute:${attr.uuid}`}
+              key={attr.uuid}
+              className="space-y-3 rounded-lg border p-4"
+            >
               <div className="flex items-center gap-2">
                 <Label className="text-base font-medium">{attr.name}</Label>
               </div>

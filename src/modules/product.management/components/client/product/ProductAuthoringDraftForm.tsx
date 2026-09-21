@@ -6,6 +6,7 @@ import type {
   TCategoryIndexPayload,
   TProductDraft,
 } from "@/modules/product.management";
+import { getProductAuthoringNavigation } from "@/modules/product.management/authoring/ProductAuthoringNavigation";
 import ProductAuthoringShell from "@/modules/product.management/authoring/ProductAuthoringShell";
 import {
   ProductAuthoringStep,
@@ -186,9 +187,11 @@ export default function ProductAuthoringDraftForm({
         "Selected",
     },
   ];
+  const navigation = getProductAuthoringNavigation(controller, mode);
   return (
     <ProductAuthoringShell
       draft={draft}
+      currentStep={activeStep}
       onBack={() => {
         const previous = draft.workflow.steps
           .filter((step) => step.position < (currentStep?.position ?? 1))
@@ -217,6 +220,7 @@ export default function ProductAuthoringDraftForm({
       isPending={draftController.isPending}
       savedLabel={draftController.savedLabel}
       setupSummary={setupSummary}
+      navigation={navigation}
     >
       <ProductAuthoringStepContent
         categoryIndexPayload={categoryIndexPayload}
@@ -249,6 +253,7 @@ function ProductAuthoringShellFallback({
   onBack: () => void;
 }) {
   const draftMode = mode === "update" ? "edit" : "create";
+  const navigation = getProductAuthoringNavigation(controller, mode);
 
   return (
     <ProductAuthoringShell
@@ -303,6 +308,7 @@ function ProductAuthoringShellFallback({
       canContinue
       isPending={isPending}
       savedLabel={savedLabel}
+      navigation={navigation}
     >
       <ProductAuthoringStepContent
         categoryIndexPayload={categoryIndexPayload}

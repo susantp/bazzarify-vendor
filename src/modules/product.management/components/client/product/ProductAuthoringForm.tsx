@@ -235,6 +235,7 @@ function BasicInformationSection({
         <Input
           value={basicState.productForm.name}
           onChange={basicState.onProductFormInputChange}
+          data-authoring-field="name"
           name="name"
           className={cn(
             "focus-visible:ring-primary",
@@ -251,6 +252,7 @@ function BasicInformationSection({
             <Input
               value={basicState.productForm.base_price}
               onChange={basicState.onProductFormInputChange}
+              data-authoring-field="base_price"
               className={cn(
                 "focus-visible:ring-primary",
                 basePriceError && "border-destructive",
@@ -273,6 +275,7 @@ function BasicInformationSection({
             <Input
               value={basicState.productForm.minimum_order_quantity}
               onChange={basicState.onProductFormInputChange}
+              data-authoring-field="minimum_order_quantity"
               className={cn(
                 "focus-visible:ring-primary",
                 minimumOrderQuantityError && "border-destructive",
@@ -295,6 +298,7 @@ function BasicInformationSection({
           disabled={mode === "update"}
           value={basicState.productForm.sku}
           onChange={basicState.onProductFormInputChange}
+          data-authoring-field="sku"
           name="sku"
           className={cn(
             "focus-visible:ring-primary",
@@ -338,42 +342,44 @@ function CategorySection({
       title="Category"
       className={categoryError ? "border-destructive" : undefined}
     >
-      <CategoryDropdown
-        selectedCategories={categoryState.selectedCategories}
-        committedCategories={categoryState.committedCategories}
-        open={categoryState.showDropdown}
-        onOpenChangeAction={categoryState.handleShowDropdownChange}
-        rootCategories={rootCategories.filter((category) =>
-          category.name
-            .toLowerCase()
-            .includes(categoryState.filters.root.toLowerCase()),
-        )}
-        subCategories={categoryState.subCategories.filter((category) =>
-          category.name
-            .toLowerCase()
-            .includes(categoryState.filters.sub.toLowerCase()),
-        )}
-        subChildCategories={categoryState.subChildCategories.filter(
-          (category) =>
+      <div id="category" data-authoring-field="category">
+        <CategoryDropdown
+          selectedCategories={categoryState.selectedCategories}
+          committedCategories={categoryState.committedCategories}
+          open={categoryState.showDropdown}
+          onOpenChangeAction={categoryState.handleShowDropdownChange}
+          rootCategories={rootCategories.filter((category) =>
             category.name
               .toLowerCase()
-              .includes(categoryState.filters.subchild.toLowerCase()),
-        )}
-        onClickRoot={categoryState.handleClickRoot}
-        onClickSub={categoryState.handleClickSub}
-        onClickSubChild={categoryState.handleClickSubChild}
-        onCommitSelectedCategory={categoryState.handleCommitSelectedCategory}
-        onFilterChange={categoryState.updateFilter}
-        invalid={Boolean(categoryError)}
-        errorMessage={categoryError}
-        {...(mode === "update"
-          ? {
-              categoryChangeLocked: categoryState.categoryChangeLocked,
-              lockedSelectionMessage:
-                "Category changes are unavailable in edit. Create a new product if you need a different category.",
-            }
-          : {})}
-      />
+              .includes(categoryState.filters.root.toLowerCase()),
+          )}
+          subCategories={categoryState.subCategories.filter((category) =>
+            category.name
+              .toLowerCase()
+              .includes(categoryState.filters.sub.toLowerCase()),
+          )}
+          subChildCategories={categoryState.subChildCategories.filter(
+            (category) =>
+              category.name
+                .toLowerCase()
+                .includes(categoryState.filters.subchild.toLowerCase()),
+          )}
+          onClickRoot={categoryState.handleClickRoot}
+          onClickSub={categoryState.handleClickSub}
+          onClickSubChild={categoryState.handleClickSubChild}
+          onCommitSelectedCategory={categoryState.handleCommitSelectedCategory}
+          onFilterChange={categoryState.updateFilter}
+          invalid={Boolean(categoryError)}
+          errorMessage={categoryError}
+          {...(mode === "update"
+            ? {
+                categoryChangeLocked: categoryState.categoryChangeLocked,
+                lockedSelectionMessage:
+                  "Category changes are unavailable in edit. Create a new product if you need a different category.",
+              }
+            : {})}
+        />
+      </div>
       {mode === "update" && (
         <p className="pt-2 text-sm text-muted-foreground">
           Category reassignment is currently unavailable while editing an
@@ -429,25 +435,27 @@ function MediaSection({
           after you save this product.
         </p>
       )}
-      <ImageUploader
-        onImageSelect={
-          isDraftMedia ? undefined : mediaState.handleProductImageUpload
-        }
-        initialImages={mediaState.existingProductImages}
-        stagedImages={stagedImages}
-        onStageImage={onStageImage}
-        onRemoveStaged={onRemoveStaged}
-        {...(mode === "update" && !isDraftMedia
-          ? {
-              onRemoveExisting: async (url: string) =>
-                await mediaState.handleRemoveExistingProductImage!(url),
-              onExistingListChange: (urls: string[]) =>
-                mediaState.handleExistingProductImagesChange(urls),
-            }
-          : {})}
-        invalid={Boolean(imagesError)}
-        errorMessage={imagesError}
-      />
+      <div id="media" data-authoring-field="images">
+        <ImageUploader
+          onImageSelect={
+            isDraftMedia ? undefined : mediaState.handleProductImageUpload
+          }
+          initialImages={mediaState.existingProductImages}
+          stagedImages={stagedImages}
+          onStageImage={onStageImage}
+          onRemoveStaged={onRemoveStaged}
+          {...(mode === "update" && !isDraftMedia
+            ? {
+                onRemoveExisting: async (url: string) =>
+                  await mediaState.handleRemoveExistingProductImage!(url),
+                onExistingListChange: (urls: string[]) =>
+                  mediaState.handleExistingProductImagesChange(urls),
+              }
+            : {})}
+          invalid={Boolean(imagesError)}
+          errorMessage={imagesError}
+        />
+      </div>
       {mode === "update" && mediaState.hasPendingExistingImageRemovals && (
         <p className="mt-3 text-sm text-amber-700">
           Pending product image removals will apply when you save.
@@ -506,6 +514,7 @@ function SpecificationsSection({
                   <Input
                     name={`specifications[${specification.key}]`}
                     id={inputId}
+                    data-authoring-field={`specification:${specification.key}`}
                     type={specification.type}
                     required={true}
                     className={cn(
@@ -559,7 +568,7 @@ function OptionsSection({
       title="Customer Options"
       className={variantsError ? "border-destructive" : undefined}
     >
-      <div className="space-y-4">
+      <div id="options" data-authoring-field="options" className="space-y-4">
         {supportsCustomerOptions && (
           <>
             <p className="text-sm text-muted-foreground">
