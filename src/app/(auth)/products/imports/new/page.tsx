@@ -2,6 +2,7 @@ import {
   getAuthUser,
   getSessionUserUUID,
 } from "@/modules/auth/data/lib/auth-lib";
+import { requireWorkspaceCapability } from "@/modules/auth/domain/requireWorkspaceCapability";
 import ErrorComponent from "@/modules/core/components/client/ErrorComponent";
 import BackLinkButton from "@/modules/core/components/server/BackLinkButton";
 import PageContainer from "@/modules/core/components/server/PageContainer";
@@ -16,6 +17,10 @@ import ProductImportUploadForm from "@/modules/product.management/components/cli
 import { redirect } from "next/navigation";
 
 export default async function NewProductImportPage() {
+  await requireWorkspaceCapability(
+    "canImportProducts",
+    "/products/imports/new",
+  );
   const guidePayload = await actionGetProductImportGuide();
 
   if ("error" in guidePayload) {

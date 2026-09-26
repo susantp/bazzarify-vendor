@@ -1,11 +1,12 @@
 import { Button } from "@/components/ui/button";
+import { requireWorkspaceCapability } from "@/modules/auth/domain/requireWorkspaceCapability";
+import { getWorkspaceCapabilities } from "@/modules/auth/domain/workspace-capabilities";
 import { TableColumn } from "@/modules/core/components/client/DynamicTable";
 import ServerDataTable from "@/modules/core/components/client/ServerDataTable";
 import PageContainer from "@/modules/core/components/server/PageContainer";
 import { flattenSearchParams } from "@/modules/core/utils/searchParams";
 import { TProduct } from "@/modules/product.management";
 import { actionGetProducts } from "@/modules/product.management/actions/product";
-import { requireVendorStoreGuard } from "@/modules/vendor/domain/requireVendorStoreGuard";
 import { Upload } from "lucide-react";
 import Link from "next/link";
 import { FaPlus } from "react-icons/fa6";
@@ -46,7 +47,10 @@ export default async function ProductsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireVendorStoreGuard("/products");
+  const user = await requireWorkspaceCapability("canViewProducts", "/products");
+  const capabilities = getWorkspaceCapabilities(user);
+  const canWriteProducts = capabilities.canWriteProducts;
+  const canImportProducts = capabilities.canImportProducts;
 
   const resolvedSearchParams = await searchParams;
   const flattenedParams = flattenSearchParams(resolvedSearchParams);
@@ -76,20 +80,26 @@ export default async function ProductsPage({
         title="Manage Products"
         description="Manage products with server-driven filters, pagination, and backend-owned query behavior."
         toolbarAction={
-          <div className="flex items-center gap-2">
-            <Button asChild size="sm" variant="outline">
-              <Link href="/products/imports/new">
-                <Upload className="mr-2 h-4 w-4" />
-                Bulk Import
-              </Link>
-            </Button>
-            <Button asChild size="sm">
-              <Link href="/products/create">
-                <FaPlus className="mr-2" />
-                New Product
-              </Link>
-            </Button>
-          </div>
+          canWriteProducts || canImportProducts ? (
+            <div className="flex items-center gap-2">
+              {canImportProducts ? (
+                <Button asChild size="sm" variant="outline">
+                  <Link href="/products/imports/new">
+                    <Upload className="mr-2 h-4 w-4" />
+                    Bulk Import
+                  </Link>
+                </Button>
+              ) : null}
+              {canWriteProducts ? (
+                <Button asChild size="sm">
+                  <Link href="/products/create">
+                    <FaPlus className="mr-2" />
+                    New Product
+                  </Link>
+                </Button>
+              ) : null}
+            </div>
+          ) : undefined
         }
         columns={productColumns}
         rows={products?.data ?? []}
@@ -117,14 +127,18 @@ export default async function ProductsPage({
         rowActions={[
           {
             label: "View",
-            hrefTemplate: "/products/:uuid",
+            hrefTemplate: "/products/:uuid/view",
             variant: "outline",
           },
-          {
-            label: "Edit",
-            hrefTemplate: "/products/:uuid/edit",
-            variant: "outline",
-          },
+          ...(canWriteProducts
+            ? [
+                {
+                  label: "Edit",
+                  hrefTemplate: "/products/:uuid/edit",
+                  variant: "outline" as const,
+                },
+              ]
+            : []),
         ]}
       />
     </PageContainer>

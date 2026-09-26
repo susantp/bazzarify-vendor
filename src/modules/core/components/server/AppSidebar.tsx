@@ -12,12 +12,15 @@ import { cn } from "@/lib/utils";
 import WorkspaceSwitcher from "@/modules/auth/components/server/WorkspaceSwitcher";
 import { getSessionUser } from "@/modules/auth/data/auth-service";
 import { getVendorStore } from "@/modules/auth/domain/workspace";
+import {
+  getWorkspaceCapabilities,
+  type WorkspaceCapabilities,
+} from "@/modules/auth/domain/workspace-capabilities";
 import SidebarAccountMenu from "@/modules/core/components/client/SidebarAccountMenu";
 import SidebarMenuButtonComponent from "@/modules/core/components/client/SidebarMenuButton";
 import SidebarMenuGroupComponent from "@/modules/core/components/client/SidebarMenuGroup";
 import { TMenuEntry } from "@/modules/core/data";
 import { isStoreProductAuthoringReady } from "@/modules/vendor/domain/schemas/store";
-import { headers } from "next/headers";
 import Image from "next/image";
 import { FaClipboardCheck, FaHome, FaImage } from "react-icons/fa";
 import {
@@ -74,14 +77,58 @@ const vendorNavigations: TMenuEntry[] = [
   { type: "link", title: "Orders", path: "/orders", icon: FaFirstOrder },
 ];
 
-function isEntryVisible(entry: TMenuEntry, isSuperAdmin: boolean): boolean {
-  if (
-    entry.type === "link" &&
-    (entry.path === "/users" || entry.path === "/vendors")
-  ) {
-    return isSuperAdmin;
+const tenantMembershipNavigation: TMenuEntry = {
+  type: "link",
+  title: "Members",
+  path: "/workspace/members",
+  icon: FaUsers,
+};
+
+const onboardingNavigation: TMenuEntry = {
+  type: "link",
+  title: "Onboarding",
+  path: "/onboarding",
+  icon: FaStore,
+};
+
+function canViewNavigation(
+  entry: TMenuEntry,
+  capabilities: WorkspaceCapabilities,
+): boolean {
+  if (entry.type === "group") {
+    return entry.pathMatch === "/products" && capabilities.canViewProducts;
   }
-  return true;
+
+  if (entry.path === "/") return capabilities.canViewDashboard;
+  if (entry.path === "/onboarding") return capabilities.isVendorIdentity;
+  if (entry.path === "/products/reviews") {
+    return capabilities.canReviewProducts;
+  }
+  if (entry.path === "/products") return capabilities.canViewProducts;
+  if (entry.path === "/orders") return capabilities.canViewOrders;
+  if (entry.path === "/workspace/members") {
+    return capabilities.canManageTenantMembers;
+  }
+  if (entry.path === "/sliders" || entry.path === "/categories") {
+    return capabilities.canManagePlatformCatalog;
+  }
+  if (entry.path === "/users") return capabilities.canManagePlatformUsers;
+  if (entry.path === "/vendors") return capabilities.canManagePlatformVendors;
+  return false;
+}
+
+function filterNavigation(
+  entry: TMenuEntry,
+  capabilities: WorkspaceCapabilities,
+): TMenuEntry | null {
+  if (!canViewNavigation(entry, capabilities)) return null;
+  if (entry.type !== "group") return entry;
+
+  const children = entry.children.filter(
+    (child) =>
+      child.path !== "/products/imports" || capabilities.canImportProducts,
+  );
+  return children.length > 0 ? { ...entry, children } : null;
 }
 
 function getDisplayName(name: string | null, email: string | null): string {
@@ -131,13 +178,11 @@ function formatRoleSummary(roleNames: string[]): string {
 }
 
 export async function AppSidebar({ className }: { className?: string }) {
-  const requestHeaders = await headers();
-  const isVendor = requestHeaders.get("host")?.startsWith("vendor.");
   const sessionUser = await getSessionUser();
+  const capabilities = sessionUser
+    ? getWorkspaceCapabilities(sessionUser)
+    : null;
   const currentStore = sessionUser ? getVendorStore(sessionUser) : null;
-  const isSuperAdmin = Boolean(
-    sessionUser?.platform_roles.includes("super-admin"),
-  );
   const roleNames = sessionUser?.roles.map((role) => role.name) ?? [];
   const displayName = getDisplayName(
     sessionUser?.name ?? null,
@@ -145,26 +190,33 @@ export async function AppSidebar({ className }: { className?: string }) {
   );
   const initials = getInitials(displayName);
   const roleSummary = formatRoleSummary(roleNames);
-  const hasSettingsAccess =
-    !isVendor &&
-    roleNames.some(
-      (roleName) => roleName === "admin" || roleName === "super-admin",
-    );
+  const hasSettingsAccess = capabilities?.canManagePlatformCatalog ?? false;
   const storeName = currentStore?.name?.trim() || null;
   const hasStore = Boolean(currentStore);
   const hasBlockedStoreSetup = Boolean(
     currentStore && !isStoreProductAuthoringReady(currentStore),
   );
-  const vendorIsNotReady = isVendor && (!hasStore || hasBlockedStoreSetup);
-  const vendorLandingNavigation: TMenuEntry = vendorIsNotReady
-    ? { type: "link", title: "Onboarding", path: "/onboarding", icon: FaStore }
-    : { type: "link", title: "Dashboard", path: "/", icon: FaHome };
-  const navigations: TMenuEntry[] = isVendor
-    ? [vendorLandingNavigation, ...vendorNavigations.slice(1)]
-    : adminNavigations;
-  const entries = navigations.filter((entry) =>
-    isEntryVisible(entry, isSuperAdmin),
-  );
+  const isVendor = capabilities?.workspace === "tenant";
+  const navigations =
+    capabilities?.workspace === "platform"
+      ? adminNavigations
+      : capabilities?.workspace === "tenant"
+        ? capabilities.isVendorIdentity && (!hasStore || hasBlockedStoreSetup)
+          ? [onboardingNavigation]
+          : [
+              ...vendorNavigations,
+              ...(capabilities.canManageTenantMembers
+                ? [tenantMembershipNavigation]
+                : []),
+            ]
+        : capabilities?.isVendorIdentity
+          ? [onboardingNavigation]
+          : [];
+  const entries = navigations
+    .map((entry) =>
+      capabilities ? filterNavigation(entry, capabilities) : null,
+    )
+    .filter((entry): entry is TMenuEntry => entry !== null);
 
   const workspaceName = sessionUser?.tenants.find(
     (tenant) => tenant.uuid === sessionUser.current_tenant_uuid,
@@ -174,21 +226,22 @@ export async function AppSidebar({ className }: { className?: string }) {
   const identitySummary = hasBlockedStoreSetup
     ? "Store setup incomplete"
     : workspaceName || storeName || "Signed in account";
-  const storeAction = !isVendor
-    ? null
-    : !hasStore
-      ? {
-          href: "/store-required",
-          label: "Complete store setup",
-          tone: "default" as const,
-        }
-      : hasBlockedStoreSetup
-        ? {
-            href: "/store-remediation",
-            label: "Finish store setup",
-            tone: "warning" as const,
-          }
-        : null;
+  const storeAction =
+    !capabilities?.isVendorIdentity || hasBlockedStoreSetup
+      ? !capabilities?.isVendorIdentity
+        ? null
+        : !hasStore
+          ? {
+              href: "/store-required",
+              label: "Complete store setup",
+              tone: "default" as const,
+            }
+          : {
+              href: "/store-remediation",
+              label: "Finish store setup",
+              tone: "warning" as const,
+            }
+      : null;
 
   return (
     <div className={isVendor ? "sidebar-theme-vendor" : "sidebar-theme-admin"}>
@@ -256,7 +309,9 @@ export async function AppSidebar({ className }: { className?: string }) {
               settingsHref={
                 hasSettingsAccess ? "/settings/store-onboarding" : null
               }
-              profileHref={isVendor ? "/vendor-capabilities" : null}
+              profileHref={
+                capabilities?.isVendorIdentity ? "/vendor-capabilities" : null
+              }
               storeAction={storeAction}
             />
           </SidebarFooter>

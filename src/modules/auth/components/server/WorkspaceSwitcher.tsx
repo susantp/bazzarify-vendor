@@ -35,7 +35,7 @@ export default function WorkspaceSwitcher({ user }: { user: TSessionUser }) {
               ) : null}
               {user.tenants.map((tenant) => (
                 <option key={tenant.uuid} value={tenant.uuid}>
-                  {tenant.name}
+                  {tenant.name} ({tenant.authorized_stores.length} stores)
                 </option>
               ))}
             </select>
@@ -47,6 +47,20 @@ export default function WorkspaceSwitcher({ user }: { user: TSessionUser }) {
             Switch workspace
           </button>
         </form>
+      ) : null}
+      {user.current_tenant_uuid ? (
+        <ul
+          aria-label="Authorized stores in this workspace"
+          className="space-y-1 px-3 text-xs text-sidebar-foreground/80"
+        >
+          {user.tenants
+            .find((tenant) => tenant.uuid === user.current_tenant_uuid)
+            ?.authorized_stores.map((store) => (
+              <li className="truncate" key={store.uuid} title={store.name}>
+                {store.name}
+              </li>
+            ))}
+        </ul>
       ) : null}
       <Link
         className="block rounded-md px-3 py-2 text-center text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent"

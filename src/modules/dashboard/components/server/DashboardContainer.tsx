@@ -1,3 +1,4 @@
+import WorkspaceStoreFilter from "@/modules/auth/components/server/WorkspaceStoreFilter";
 import {
   getAuthUser,
   getSessionUserUUID,
@@ -15,7 +16,7 @@ import { AlertTriangle } from "lucide-react";
 import { redirect } from "next/navigation";
 
 type Props = {
-  searchParams?: Promise<{ window?: string }>;
+  searchParams?: Promise<{ window?: string; store_uuid?: string }>;
 };
 
 const resolveWindow = (raw?: string): DashboardWindow =>
@@ -36,7 +37,11 @@ export default async function DashboardContainer({ searchParams }: Props) {
     return null;
   }
 
-  const result = await actionGetDashboardSummary(window);
+  const activeStores = authUser.authorized_stores.map(({ uuid, name }) => ({
+    uuid,
+    name,
+  }));
+  const result = await actionGetDashboardSummary(window, params.store_uuid);
 
   if ("error" in result) {
     if (result.errorCode === 403) {
@@ -59,10 +64,19 @@ export default async function DashboardContainer({ searchParams }: Props) {
     <PageContainer
       pageTitle={surface.heading}
       actionSlot={
-        <DashboardPeriodToggle
-          currentWindow={result.period.window}
-          choices={surface.period_choices}
-        />
+        <div className="flex flex-wrap items-end justify-end gap-3">
+          <WorkspaceStoreFilter
+            actionPath="/"
+            parameterName="store_uuid"
+            preservedParameters={{ window }}
+            selectedStoreUuid={params.store_uuid}
+            stores={activeStores}
+          />
+          <DashboardPeriodToggle
+            currentWindow={result.period.window}
+            choices={surface.period_choices}
+          />
+        </div>
       }
     >
       <div className="space-y-4">
