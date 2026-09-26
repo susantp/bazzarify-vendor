@@ -6,14 +6,17 @@ import {
   setAuthUser,
 } from "@/modules/auth/data/lib/auth-lib";
 import { actionGetUser } from "@/modules/auth/domain/auth-actions";
+import { resolveTenantWorkspaceForHost } from "@/modules/auth/domain/tenant-host";
 import ApiResponseSchema from "@/modules/core/domain/schemas/ApiResponse";
 import { authAxiosInstance } from "@/modules/core/lib/utils.axios";
 import { handleRemoteError } from "@/modules/core/lib/utils.index";
+import { getRequestHostname } from "@/modules/core/lib/utils.requestHost";
 import {
   getCookieStore,
   setSelectedTenantUuid,
 } from "@/modules/core/lib/utils.session";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
@@ -71,8 +74,16 @@ export async function actionSelectWorkspace(formData: FormData): Promise<void> {
     redirect("/login");
   }
 
+  const hostWorkspace = resolveTenantWorkspaceForHost(
+    user.tenants,
+    getRequestHostname(await headers()),
+  );
+
   const selected = formData.get("tenant_uuid");
   if (selected === "platform") {
+    if (hostWorkspace) {
+      redirect("/workspace?error=host-workspace-locked");
+    }
     if (!isPlatformWorkspaceAvailable(user.platform_roles)) {
       redirect("/workspace?error=invalid-workspace");
     }
@@ -87,6 +98,10 @@ export async function actionSelectWorkspace(formData: FormData): Promise<void> {
 
   if (!user.tenants.some((tenant) => tenant.uuid === selected)) {
     redirect("/workspace?error=invalid-workspace");
+  }
+
+  if (hostWorkspace && hostWorkspace.uuid !== selected) {
+    redirect("/workspace?error=host-workspace-locked");
   }
 
   await setSelectedTenantUuid(selected);
