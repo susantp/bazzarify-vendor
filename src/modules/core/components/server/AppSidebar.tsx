@@ -9,7 +9,9 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import WorkspaceSwitcher from "@/modules/auth/components/server/WorkspaceSwitcher";
 import { getSessionUser } from "@/modules/auth/data/auth-service";
+import { getVendorStore } from "@/modules/auth/domain/workspace";
 import SidebarAccountMenu from "@/modules/core/components/client/SidebarAccountMenu";
 import SidebarMenuButtonComponent from "@/modules/core/components/client/SidebarMenuButton";
 import SidebarMenuGroupComponent from "@/modules/core/components/client/SidebarMenuGroup";
@@ -132,8 +134,9 @@ export async function AppSidebar({ className }: { className?: string }) {
   const requestHeaders = await headers();
   const isVendor = requestHeaders.get("host")?.startsWith("vendor.");
   const sessionUser = await getSessionUser();
+  const currentStore = sessionUser ? getVendorStore(sessionUser) : null;
   const isSuperAdmin = Boolean(
-    sessionUser?.roles.some((role) => role.name === "super-admin"),
+    sessionUser?.platform_roles.includes("super-admin"),
   );
   const roleNames = sessionUser?.roles.map((role) => role.name) ?? [];
   const displayName = getDisplayName(
@@ -147,10 +150,10 @@ export async function AppSidebar({ className }: { className?: string }) {
     roleNames.some(
       (roleName) => roleName === "admin" || roleName === "super-admin",
     );
-  const storeName = sessionUser?.store?.name?.trim() || null;
-  const hasStore = Boolean(sessionUser?.store);
+  const storeName = currentStore?.name?.trim() || null;
+  const hasStore = Boolean(currentStore);
   const hasBlockedStoreSetup = Boolean(
-    sessionUser?.store && !isStoreProductAuthoringReady(sessionUser.store),
+    currentStore && !isStoreProductAuthoringReady(currentStore),
   );
   const vendorIsNotReady = isVendor && (!hasStore || hasBlockedStoreSetup);
   const vendorLandingNavigation: TMenuEntry = vendorIsNotReady
@@ -163,10 +166,14 @@ export async function AppSidebar({ className }: { className?: string }) {
     isEntryVisible(entry, isSuperAdmin),
   );
 
-  const secondaryText = storeName || sessionUser?.email || "Signed in";
+  const workspaceName = sessionUser?.tenants.find(
+    (tenant) => tenant.uuid === sessionUser.current_tenant_uuid,
+  )?.name;
+  const secondaryText =
+    workspaceName || storeName || sessionUser?.email || "Signed in";
   const identitySummary = hasBlockedStoreSetup
     ? "Store setup incomplete"
-    : storeName || "Signed in account";
+    : workspaceName || storeName || "Signed in account";
   const storeAction = !isVendor
     ? null
     : !hasStore
@@ -196,6 +203,7 @@ export async function AppSidebar({ className }: { className?: string }) {
               priority={true}
             />
           </div>
+          {sessionUser ? <WorkspaceSwitcher user={sessionUser} /> : null}
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
