@@ -20,7 +20,7 @@ type PersonaDefinition = {
   password: string;
 };
 
-const baseUrl = process.env.VENDOR_BASE_URL ?? "http://127.0.0.1:3001";
+const baseUrl = process.env.VENDOR_BASE_URL ?? "http://localhost:3001";
 const verificationPassword = "H@nds0me1522";
 const personas: Record<string, PersonaDefinition> = {
   vendor_admin: {

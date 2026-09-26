@@ -7,6 +7,7 @@ import {
 import {
   deleteSession,
   getCookieStore,
+  getSelectedTenantUuid,
 } from "@/modules/core/lib/utils.session";
 import axios, { CreateAxiosDefaults } from "axios";
 import { redirect } from "next/navigation";
@@ -31,15 +32,20 @@ export const defaultAxiosInstance = axios.create({
 });
 
 export const authAxiosInstance = async () => {
-  const token: string | null = await getSessionToken(await getCookieStore());
+  const cookieStore = await getCookieStore();
+  const token: string | null = await getSessionToken(cookieStore);
   if (!token) {
     redirect("/login");
   }
+  const selectedTenantUuid = await getSelectedTenantUuid();
   const instance = axios.create({
     ...defaultConfig,
     headers: {
       ...defaultConfig.headers,
       Authorization: `Bearer ${token}`,
+      ...(selectedTenantUuid
+        ? { "X-Bazarify-Tenant": selectedTenantUuid }
+        : {}),
     },
   });
   instance.interceptors.response.use((response) => {

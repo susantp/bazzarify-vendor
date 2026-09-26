@@ -2,6 +2,28 @@ import { RoleSchema } from "@/modules/auth/domain/schemas/RoleSchema";
 import StoreSchema from "@/modules/vendor/domain/schemas/store";
 import { z } from "zod";
 
+export const TenantAuthorizedStoreSchema = StoreSchema.pick({
+  uuid: true,
+  user_uuid: true,
+  store_type_uuid: true,
+  name: true,
+  slug: true,
+  category_count: true,
+  product_authoring_ready: true,
+  onboarding: true,
+}).strip();
+
+export const TenantWorkspaceSchema = z
+  .object({
+    uuid: z.uuid(),
+    name: z.string(),
+    slug: z.string(),
+    membership_uuid: z.uuid(),
+    roles: z.array(z.string()),
+    authorized_stores: z.array(TenantAuthorizedStoreSchema),
+  })
+  .strip();
+
 export const UserSchema = z
   .object({
     uuid: z.uuid(),
@@ -27,7 +49,10 @@ export const SessionUserSchema = UserSchema.pick({
   phone_verified_at: true,
 })
   .extend({
-    store: StoreSchema.nullable(),
+    current_tenant_uuid: z.uuid().nullable(),
+    platform_roles: z.array(z.string()),
+    tenants: z.array(TenantWorkspaceSchema),
+    authorized_stores: z.array(TenantAuthorizedStoreSchema),
     roles: z.array(
       RoleSchema.pick({
         name: true,

@@ -23,11 +23,15 @@ type VendorUserEnvelope = {
     payload?: {
       user?: {
         uuid?: string;
-        roles?: Array<{ name?: string }>;
-        store?: {
+        platform_roles?: string[];
+        tenants?: Array<{
           uuid?: string | null;
-          store_type_uuid?: string | null;
-        } | null;
+          roles?: string[];
+          authorized_stores?: Array<{
+            uuid?: string | null;
+            store_type_uuid?: string | null;
+          }>;
+        }>;
       };
     } | null;
   };
@@ -177,10 +181,12 @@ async function writeOptionalArtifact(
 async function createSessionCookie({
   token,
   userUUID,
+  selectedTenantUuid,
   sessionSecret,
 }: {
   token: string;
   userUUID: string;
+  selectedTenantUuid: string | null;
   sessionSecret: string;
 }) {
   const encodedKey = new TextEncoder().encode(sessionSecret);
@@ -189,6 +195,7 @@ async function createSessionCookie({
   return new SignJWT({
     token,
     userUUID,
+    selectedTenantUuid,
     expiresAt,
   })
     .setProtectedHeader({ alg: "HS256" })
@@ -277,9 +284,24 @@ async function main() {
     throw new Error("Vendor user fetch did not return a user UUID.");
   }
 
+  const platformRoles = user?.platform_roles ?? [];
+  const tenants = user?.tenants ?? [];
+  const hasPlatformWorkspace = platformRoles.some(
+    (role) => role === "admin" || role === "super-admin",
+  );
+  const selectedTenantUuid =
+    !hasPlatformWorkspace && tenants.length === 1
+      ? (tenants[0].uuid ?? null)
+      : null;
+  const selectedWorkspace = tenants.find(
+    (tenant) => tenant.uuid === selectedTenantUuid,
+  );
+  const authorizedStore = selectedWorkspace?.authorized_stores?.[0];
+
   const sessionCookie = await createSessionCookie({
     token,
     userUUID,
+    selectedTenantUuid,
     sessionSecret,
   });
 
@@ -297,10 +319,11 @@ async function main() {
           (options.useDevDefaults ? "vendor_no_store" : null),
         credential,
         userUUID,
-        roles: user?.roles?.map((role) => role.name).filter(Boolean) ?? [],
-        hasStore: Boolean(user?.store?.uuid),
-        storeUUID: user?.store?.uuid ?? null,
-        storeTypeUUID: user?.store?.store_type_uuid ?? null,
+        roles: selectedWorkspace?.roles ?? platformRoles,
+        hasStore: Boolean(authorizedStore?.uuid),
+        selectedTenantUuid,
+        storeUUID: authorizedStore?.uuid ?? null,
+        storeTypeUUID: authorizedStore?.store_type_uuid ?? null,
         sessionCookie,
         cookieHeader,
         wroteCookiePath: options.writeCookiePath ?? null,
