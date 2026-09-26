@@ -1,6 +1,5 @@
 import axios from "axios";
 import { SignJWT } from "jose";
-import { writeFile } from "node:fs/promises";
 
 type RemoteMeta = {
   error?: unknown;
@@ -84,10 +83,26 @@ const PERSONAS: Record<string, PersonaDefinition> = {
     credential: "vendor.store.multiple-categories@bazarify.local",
     password: VERIFICATION_PASSWORD,
   },
+  tenant_admin_multi_store: {
+    credential: "qa-tenant-admin@bazarify.local",
+    password: VERIFICATION_PASSWORD,
+  },
+  tenant_dual_member: {
+    credential: "qa-dual-member@bazarify.local",
+    password: VERIFICATION_PASSWORD,
+  },
+  tenant_vendor_single_store: {
+    credential: "qa-vendor-alpha@bazarify.local",
+    password: VERIFICATION_PASSWORD,
+  },
+  platform_super_admin: {
+    credential: "qa-platform-admin@bazarify.local",
+    password: VERIFICATION_PASSWORD,
+  },
 };
 
 function readRequiredEnv(name: string): string {
-  const value = process.env[name]?.trim();
+  const value = Bun.env[name]?.trim();
   if (!value) {
     throw new Error(`Missing required environment variable: ${name}`);
   }
@@ -175,7 +190,7 @@ async function writeOptionalArtifact(
     return;
   }
 
-  await writeFile(path, content, "utf8");
+  await Bun.write(path, content);
 }
 
 async function createSessionCookie({
@@ -205,7 +220,7 @@ async function createSessionCookie({
 }
 
 async function main() {
-  const options = parseArgs(process.argv.slice(2));
+  const options = parseArgs(Bun.argv.slice(2));
   const apiUrl = readRequiredEnv("API_URL");
   const appKey = readRequiredEnv("APP_KEY");
   const sessionSecret = readRequiredEnv("SESSION_SECRET");
@@ -338,5 +353,5 @@ async function main() {
 await main().catch((error) => {
   const message = error instanceof Error ? error.message : String(error);
   console.error(message);
-  process.exit(1);
+  throw error;
 });

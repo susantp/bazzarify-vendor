@@ -63,7 +63,18 @@ function isPlatformWorkspaceAvailable(roles: string[]): boolean {
   return roles.some((role) => role === "admin" || role === "super-admin");
 }
 
-export async function actionSelectWorkspace(formData: FormData): Promise<void> {
+function completeWorkspaceSelection(completion: "dashboard" | "stay"): void {
+  revalidatePath("/", "layout");
+  if (completion === "stay") {
+    return;
+  }
+  redirect("/");
+}
+
+async function selectWorkspace(
+  formData: FormData,
+  completion: "dashboard" | "stay",
+): Promise<void> {
   const userUuid = await getSessionUserUUID(await getCookieStore());
   if (!userUuid) {
     redirect("/login");
@@ -88,8 +99,7 @@ export async function actionSelectWorkspace(formData: FormData): Promise<void> {
       redirect("/workspace?error=invalid-workspace");
     }
     await setSelectedTenantUuid(null);
-    revalidatePath("/", "layout");
-    redirect("/");
+    completeWorkspaceSelection(completion);
   }
 
   if (typeof selected !== "string" || !z.uuid().safeParse(selected).success) {
@@ -129,8 +139,15 @@ export async function actionSelectWorkspace(formData: FormData): Promise<void> {
     redirect("/workspace?error=membership-unavailable");
   }
 
-  revalidatePath("/", "layout");
-  redirect("/");
+  completeWorkspaceSelection(completion);
+}
+
+export async function actionSelectWorkspace(formData: FormData): Promise<void> {
+  await selectWorkspace(formData, "dashboard");
+}
+
+export async function actionSwitchWorkspace(formData: FormData): Promise<void> {
+  await selectWorkspace(formData, "stay");
 }
 
 export async function actionAcceptTenantInvitation(
