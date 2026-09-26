@@ -3,11 +3,13 @@ import {
   TSessionUser,
 } from "@/modules/auth/domain/schemas/UserSchema";
 import SessionUserPayloadSchema from "@/modules/auth/domain/schemas/payloads/SessionUserPayloadSchema";
+import { resolveTenantWorkspaceForHost } from "@/modules/auth/domain/tenant-host";
 import {
   deleteRedisValue,
   getRedisValue,
   setRedisValue,
 } from "@/modules/core/domain/actions/actionRedis";
+import { getRequestHostname } from "@/modules/core/lib/utils.requestHost";
 import {
   getSelectedTenantUuid,
   getSessionDecrypted,
@@ -16,6 +18,7 @@ import { IApiMetaData } from "@/modules/core/schemas/response";
 import { fetchAuthDataAndValidate } from "@/modules/core/utils/fetchAuthDataAndValidate";
 import { handleError } from "@/modules/core/utils/jsonResponse.utils";
 import { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
+import { headers } from "next/headers";
 
 export async function getSessionToken(
   store: ReadonlyRequestCookies,
@@ -66,10 +69,16 @@ export async function getAuthUser(
       await setRedisValue(token, JSON.stringify(user));
     }
 
-    const selectedTenantUuid = await getSelectedTenantUuid();
-    const workspace = user.tenants.find(
-      (tenant) => tenant.uuid === selectedTenantUuid,
+    const requestHostname = getRequestHostname(await headers());
+    const hostWorkspace = resolveTenantWorkspaceForHost(
+      user.tenants,
+      requestHostname,
     );
+    const selectedTenantUuid =
+      hostWorkspace?.uuid ?? (await getSelectedTenantUuid());
+    const workspace =
+      hostWorkspace ??
+      user.tenants.find((tenant) => tenant.uuid === selectedTenantUuid);
 
     return {
       ...user,

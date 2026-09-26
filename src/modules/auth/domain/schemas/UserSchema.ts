@@ -18,6 +18,7 @@ export const TenantWorkspaceSchema = z
     uuid: z.uuid(),
     name: z.string(),
     slug: z.string(),
+    domains: z.array(z.string()),
     membership_uuid: z.uuid(),
     roles: z.array(z.string()),
     authorized_stores: z.array(TenantAuthorizedStoreSchema),
