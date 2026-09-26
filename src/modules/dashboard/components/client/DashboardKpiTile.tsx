@@ -3,7 +3,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import Sparkline from "@/modules/dashboard/components/client/Sparkline";
-import type { TDashboardKpi } from "@/modules/dashboard/schemas/dashboard-summary-schema";
 import { ArrowDownRight, ArrowRight, ArrowUpRight } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -11,7 +10,7 @@ export type KpiFormat = "number" | "currency";
 
 type Props = {
   label: string;
-  kpi: TDashboardKpi;
+  kpi: { value: number; deltaPct: number | null; sparkline: number[] };
   format?: KpiFormat;
   icon?: ReactNode;
   invertDelta?: boolean;

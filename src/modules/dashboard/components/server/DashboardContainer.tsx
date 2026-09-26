@@ -5,11 +5,8 @@ import {
 import PageContainer from "@/modules/core/components/server/PageContainer";
 import { getCookieStore } from "@/modules/core/lib/utils.session";
 import { actionGetDashboardSummary } from "@/modules/dashboard/actions/getDashboardSummary";
-import DashboardAttentionList from "@/modules/dashboard/components/client/DashboardAttentionList";
-import DashboardKpiGrid from "@/modules/dashboard/components/client/DashboardKpiGrid";
 import DashboardPeriodToggle from "@/modules/dashboard/components/client/DashboardPeriodToggle";
-import DashboardRecentActivity from "@/modules/dashboard/components/client/DashboardRecentActivity";
-import DashboardTopStores from "@/modules/dashboard/components/client/DashboardTopStores";
+import DashboardSurfaceRenderer from "@/modules/dashboard/components/server/DashboardSurfaceRenderer";
 import {
   DASHBOARD_WINDOWS,
   type DashboardWindow,
@@ -56,34 +53,21 @@ export default async function DashboardContainer({ searchParams }: Props) {
     );
   }
 
-  const greeting = authUser?.email ? `, ${authUser.email}` : "";
+  const { surface } = result;
 
   return (
     <PageContainer
-      pageTitle="Dashboard"
-      actionSlot={<DashboardPeriodToggle currentWindow={window} />}
+      pageTitle={surface.heading}
+      actionSlot={
+        <DashboardPeriodToggle
+          currentWindow={result.period.window}
+          choices={surface.period_choices}
+        />
+      }
     >
       <div className="space-y-4">
-        <p className="text-muted-foreground text-sm">
-          Overview of your {result.scope === "global" ? "platform" : "store"}
-          {greeting} for the last {window.replace("d", " days")}.
-        </p>
-        <DashboardKpiGrid summary={result} />
-        {result.attention.length > 0 ? (
-          <div className="grid items-stretch gap-4 lg:grid-cols-5">
-            <div className="lg:col-span-2">
-              <DashboardAttentionList items={result.attention} />
-            </div>
-            <div className="lg:col-span-3">
-              <DashboardRecentActivity items={result.recent} />
-            </div>
-          </div>
-        ) : (
-          <DashboardRecentActivity items={result.recent} />
-        )}
-        {result.scope === "global" && result.topStores.length > 0 && (
-          <DashboardTopStores stores={result.topStores} />
-        )}
+        <p className="text-muted-foreground text-sm">{surface.description}</p>
+        <DashboardSurfaceRenderer surface={surface} />
       </div>
     </PageContainer>
   );

@@ -6,6 +6,7 @@ import { Store } from "lucide-react";
 
 type Props = {
   stores: readonly TDashboardTopStore[];
+  title: string;
 };
 
 const currencyFormatter = new Intl.NumberFormat("en-IN", {
@@ -14,7 +15,7 @@ const currencyFormatter = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 0,
 });
 
-export default function DashboardTopStores({ stores }: Props) {
+export default function DashboardTopStores({ stores, title }: Props) {
   if (stores.length === 0) {
     return null;
   }
@@ -22,7 +23,7 @@ export default function DashboardTopStores({ stores }: Props) {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold">Top stores</CardTitle>
+        <CardTitle className="text-base font-semibold">{title}</CardTitle>
       </CardHeader>
       <CardContent>
         <ul className="divide-y">

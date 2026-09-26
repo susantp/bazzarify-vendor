@@ -1,9 +1,10 @@
+import { expect, test } from "bun:test";
+
 import {
   ProductAuthoringSchema,
   hasAuthoringField,
 } from "@/modules/product.management/schemas/ProductAuthoringSchema";
 import { resolveAuthoringRenderer } from "@/modules/product.management/utils/productAuthoringRenderer";
-import assert from "node:assert/strict";
 
 const retailSchema = {
   version: "product-authoring.v1",
@@ -57,43 +58,49 @@ const retailSchema = {
   ],
 };
 
-const parsed = ProductAuthoringSchema.safeParse(retailSchema);
-assert.equal(parsed.success, true);
-if (parsed.success) {
-  assert.equal(hasAuthoringField(parsed.data, "name"), true);
-  assert.equal(hasAuthoringField(parsed.data, "variants.sku"), true);
-  assert.equal(hasAuthoringField(parsed.data, "images"), false);
-  assert.equal(resolveAuthoringRenderer(parsed.data, "variants"), "collection");
-}
+test("product authoring schema exposes supported fields and renderers", () => {
+  const parsed = ProductAuthoringSchema.safeParse(retailSchema);
+  expect(parsed.success).toBe(true);
+  if (!parsed.success) return;
 
-const unknownVersion = ProductAuthoringSchema.safeParse({
-  ...retailSchema,
-  version: "product-authoring.v2",
+  expect(hasAuthoringField(parsed.data, "name")).toBe(true);
+  expect(hasAuthoringField(parsed.data, "variants.sku")).toBe(true);
+  expect(hasAuthoringField(parsed.data, "images")).toBe(false);
+  expect(resolveAuthoringRenderer(parsed.data, "variants")).toBe("collection");
 });
-assert.equal(unknownVersion.success, false);
 
-const unsupportedFamily = ProductAuthoringSchema.safeParse({
-  ...retailSchema,
-  profile: { ...retailSchema.profile, type: "service" },
+test("product authoring schema rejects unsupported profile versions, families, and field types", () => {
+  expect(
+    ProductAuthoringSchema.safeParse({
+      ...retailSchema,
+      version: "product-authoring.v2",
+    }).success,
+  ).toBe(false);
+  expect(
+    ProductAuthoringSchema.safeParse({
+      ...retailSchema,
+      profile: { ...retailSchema.profile, type: "service" },
+    }).success,
+  ).toBe(false);
+  expect(
+    ProductAuthoringSchema.safeParse({
+      ...retailSchema,
+      fields: [{ ...retailSchema.fields[0], type: "component" }],
+    }).success,
+  ).toBe(false);
 });
-assert.equal(unsupportedFamily.success, false);
 
-const unknownFieldType = ProductAuthoringSchema.safeParse({
-  ...retailSchema,
-  fields: [{ ...retailSchema.fields[0], type: "component" }],
+test("product authoring schema accepts backend empty maps", () => {
+  expect(
+    ProductAuthoringSchema.safeParse({
+      ...retailSchema,
+      fields: [
+        {
+          ...retailSchema.fields[0],
+          validation: [],
+          metadata: [],
+        },
+      ],
+    }).success,
+  ).toBe(true);
 });
-assert.equal(unknownFieldType.success, false);
-
-const backendEmptyMaps = ProductAuthoringSchema.safeParse({
-  ...retailSchema,
-  fields: [
-    {
-      ...retailSchema.fields[0],
-      validation: [],
-      metadata: [],
-    },
-  ],
-});
-assert.equal(backendEmptyMaps.success, true);
-
-console.log("product authoring schema vendor assertions passed");

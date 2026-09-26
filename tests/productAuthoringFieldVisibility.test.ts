@@ -1,7 +1,8 @@
+import { expect, test } from "bun:test";
+
 import { isAuthoringFieldVisible } from "@/modules/product.management/utils/productAuthoringRenderer";
-import assert from "node:assert/strict";
 
-assert.equal(isAuthoringFieldVisible(null, "base_price", "create"), true);
-assert.equal(isAuthoringFieldVisible(null, "base_price", "update"), false);
-
-console.log("product authoring field visibility assertions passed");
+test("base price visibility differs between create and update modes", () => {
+  expect(isAuthoringFieldVisible(null, "base_price", "create")).toBe(true);
+  expect(isAuthoringFieldVisible(null, "base_price", "update")).toBe(false);
+});
