@@ -1,11 +1,7 @@
-import {
-  getAuthUser,
-  getSessionUserUUID,
-} from "@/modules/auth/data/lib/auth-lib";
+import { requireWorkspaceCapability } from "@/modules/auth/domain/requireWorkspaceCapability";
 import ErrorComponent from "@/modules/core/components/client/ErrorComponent";
 import PageContainer from "@/modules/core/components/server/PageContainer";
 import { TServerDataTableMeta } from "@/modules/core/domain/schemas/ServerDataTableMeta";
-import { getCookieStore } from "@/modules/core/lib/utils.session";
 import { flattenSearchParams } from "@/modules/core/utils/searchParams";
 import { actionGetProductImports } from "@/modules/product.management/actions/import";
 import ProductImportsServerTable from "@/modules/product.management/components/client/product-import/ProductImportsServerTable";
@@ -15,6 +11,10 @@ export default async function ProductImportsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const user = await requireWorkspaceCapability(
+    "canImportProducts",
+    "/products/imports",
+  );
   const resolvedSearchParams = await searchParams;
   const flattenedParams = flattenSearchParams(resolvedSearchParams);
   const page = Number(flattenedParams.page ?? "1");
@@ -33,14 +33,8 @@ export default async function ProductImportsPage({
     );
   }
 
-  const userUuid = await getSessionUserUUID(await getCookieStore());
-  const authUser = userUuid ? await getAuthUser(userUuid) : null;
-  const canManageAcrossStores = Boolean(
-    authUser &&
-    !("error" in authUser) &&
-    authUser.roles.some(
-      (role) => role.name === "super-admin" || role.name === "admin",
-    ),
+  const canManageAcrossStores = user.platform_roles.some(
+    (role) => role === "super-admin" || role === "admin",
   );
 
   const imports = response.imports;
