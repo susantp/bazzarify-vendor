@@ -9,6 +9,7 @@ import {
   getAuthUser,
   getSessionUserUUID,
 } from "@/modules/auth/data/lib/auth-lib";
+import { getVendorStore } from "@/modules/auth/domain/workspace";
 import PageContainer from "@/modules/core/components/server/PageContainer";
 import { ThemedButton } from "@/modules/core/components/server/ThemedButton";
 import { getCookieStore } from "@/modules/core/lib/utils.session";
@@ -40,8 +41,10 @@ export default async function StoreRequiredPage({
   const userUuid = await getSessionUserUUID(await getCookieStore());
   if (userUuid) {
     const authUser = await getAuthUser(userUuid);
-    if (authUser && !("error" in authUser) && authUser.store) {
-      if (!isStoreProductAuthoringReady(authUser.store)) {
+    const store =
+      authUser && !("error" in authUser) ? getVendorStore(authUser) : null;
+    if (store) {
+      if (!isStoreProductAuthoringReady(store)) {
         redirect(buildStoreRemediationPath(safeReturnTo));
       }
 

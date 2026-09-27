@@ -1,11 +1,11 @@
 import { actionListAdminTickets } from "@/modules/admin/workflow/actions/adminTicket";
 import type { TAdminTicket } from "@/modules/admin/workflow/schemas/AdminTicketSchema";
+import { requireWorkspaceCapability } from "@/modules/auth/domain/requireWorkspaceCapability";
 import ErrorComponent from "@/modules/core/components/client/ErrorComponent";
 import ServerDataTable from "@/modules/core/components/client/ServerDataTable";
 import PageContainer from "@/modules/core/components/server/PageContainer";
 import { TServerDataTableMeta } from "@/modules/core/domain/schemas/ServerDataTableMeta";
 import { flattenSearchParams } from "@/modules/core/utils/searchParams";
-import { requireVendorStoreGuard } from "@/modules/vendor/domain/requireVendorStoreGuard";
 
 const ticketTable: TServerDataTableMeta = {
   search: {
@@ -68,7 +68,7 @@ export default async function ProductReviewTicketsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireVendorStoreGuard("/products/reviews");
+  await requireWorkspaceCapability("canReviewProducts", "/products/reviews");
   const resolvedSearchParams = await searchParams;
   const filters = flattenSearchParams(resolvedSearchParams);
   const response = await actionListAdminTickets(filters);

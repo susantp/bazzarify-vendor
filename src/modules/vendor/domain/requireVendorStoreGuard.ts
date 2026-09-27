@@ -4,6 +4,10 @@ import {
   getAuthUser,
   getSessionUserUUID,
 } from "@/modules/auth/data/lib/auth-lib";
+import {
+  getVendorStore,
+  hasPlatformAdministratorRole,
+} from "@/modules/auth/domain/workspace";
 import { getCookieStore } from "@/modules/core/lib/utils.session";
 import { isStoreProductAuthoringReady } from "@/modules/vendor/domain/schemas/store";
 import {
@@ -23,18 +27,20 @@ export async function requireVendorStoreGuard(returnTo: string): Promise<void> {
     return;
   }
 
-  const isAdmin = authUser.roles.some(
-    (role) => role.name === "super-admin" || role.name === "admin",
-  );
-  if (isAdmin) {
+  if (hasPlatformAdministratorRole(authUser)) {
     return;
   }
 
-  if (!authUser.store) {
+  if (!authUser.current_tenant_uuid && authUser.tenants.length > 0) {
+    redirect("/workspace");
+  }
+
+  const store = getVendorStore(authUser);
+  if (!store) {
     redirect(buildStoreRequirementPath(returnTo));
   }
 
-  if (!isStoreProductAuthoringReady(authUser.store)) {
+  if (!isStoreProductAuthoringReady(store)) {
     redirect(buildStoreRemediationPath(returnTo));
   }
 }

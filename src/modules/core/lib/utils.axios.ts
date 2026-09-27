@@ -4,11 +4,15 @@ import {
   actionRemoveTokenFromCallback,
   getSessionToken,
 } from "@/modules/auth/data/lib/auth-lib";
+import { isNeutralTenantContextHost } from "@/modules/auth/domain/tenant-host";
+import { getRequestHostname } from "@/modules/core/lib/utils.requestHost";
 import {
   deleteSession,
   getCookieStore,
+  getSelectedTenantUuid,
 } from "@/modules/core/lib/utils.session";
 import axios, { CreateAxiosDefaults } from "axios";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 const remoteData: Record<string, string> = {
@@ -31,15 +35,33 @@ export const defaultAxiosInstance = axios.create({
 });
 
 export const authAxiosInstance = async () => {
-  const token: string | null = await getSessionToken(await getCookieStore());
+  const cookieStore = await getCookieStore();
+  const token: string | null = await getSessionToken(cookieStore);
   if (!token) {
     redirect("/login");
   }
+  const selectedTenantUuid = await getSelectedTenantUuid();
+  const requestHostname = getRequestHostname(await headers());
+  const neutralTenantContextHosts = (
+    process.env.TENANT_CONTEXT_NEUTRAL_HOSTS ??
+    "localhost,127.0.0.1,local-ne.larashops.local,vendor.bazarify.local,admin.bazarify.local,vendor.bazzarify.local,admin.bazzarify.local,vendor.bazarify.com.np,admin.bazarify.com.np"
+  )
+    .split(",")
+    .map((host) => host.trim())
+    .filter(Boolean);
+  const shouldForwardSelectedTenant = isNeutralTenantContextHost(
+    requestHostname,
+    neutralTenantContextHosts,
+  );
   const instance = axios.create({
     ...defaultConfig,
     headers: {
       ...defaultConfig.headers,
       Authorization: `Bearer ${token}`,
+      ...(selectedTenantUuid && shouldForwardSelectedTenant
+        ? { "X-Bazarify-Tenant": selectedTenantUuid }
+        : {}),
+      ...(requestHostname ? { "X-Bazarify-Tenant-Host": requestHostname } : {}),
     },
   });
   instance.interceptors.response.use((response) => {

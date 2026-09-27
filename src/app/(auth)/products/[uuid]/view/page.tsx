@@ -8,20 +8,24 @@ import { IPageParams } from "@/modules/core";
 import BackLinkButton from "@/modules/core/components/server/BackLinkButton";
 import PageContainer from "@/modules/core/components/server/PageContainer";
 
+import { requireWorkspaceCapability } from "@/modules/auth/domain/requireWorkspaceCapability";
+import { getWorkspaceCapabilities } from "@/modules/auth/domain/workspace-capabilities";
 import {
-  getAuthUser,
-  getSessionUserUUID,
-} from "@/modules/auth/data/lib/auth-lib";
-import { getCookieStore } from "@/modules/core/lib/utils.session";
-import { actionEditProduct } from "@/modules/product.management/actions/product";
+  actionEditProduct,
+  actionViewProduct,
+} from "@/modules/product.management/actions/product";
 import ProductInspectionView from "@/modules/product.management/components/client/product/ProductInspectionView";
-import { requireVendorStoreGuard } from "@/modules/vendor/domain/requireVendorStoreGuard";
 
 export default async function Page({ params }: IPageParams) {
   const { uuid } = await params;
-  await requireVendorStoreGuard(`/products/${uuid}/view`);
-
-  const productPayload = await actionEditProduct(uuid);
+  const user = await requireWorkspaceCapability(
+    "canViewProducts",
+    `/products/${uuid}/view`,
+  );
+  const capabilities = getWorkspaceCapabilities(user);
+  const productPayload = capabilities.canWriteProducts
+    ? await actionEditProduct(uuid)
+    : await actionViewProduct(uuid);
 
   if ("error" in productPayload) {
     return (
@@ -54,19 +58,11 @@ export default async function Page({ params }: IPageParams) {
     );
   }
 
-  const userUuid = await getSessionUserUUID(await getCookieStore());
-  const authUser = userUuid ? await getAuthUser(userUuid) : null;
-  const canPublish =
-    authUser && !("error" in authUser)
-      ? authUser.roles.some(
-          (role) => role.name === "admin" || role.name === "super-admin",
-        )
-      : false;
-
   return (
     <ProductInspectionView
       productPayload={productPayload}
-      canPublish={canPublish}
+      canEdit={capabilities.canWriteProducts}
+      canPublish={capabilities.canReviewProducts}
     />
   );
 }

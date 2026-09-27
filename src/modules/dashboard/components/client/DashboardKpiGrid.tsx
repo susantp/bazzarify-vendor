@@ -1,8 +1,9 @@
 "use client";
 
 import DashboardKpiTile from "@/modules/dashboard/components/client/DashboardKpiTile";
-import type { TDashboardSummary } from "@/modules/dashboard/schemas/dashboard-summary-schema";
+import type { TDashboardKpiItem } from "@/modules/dashboard/schemas/dashboard-summary-schema";
 import {
+  Building,
   FileSpreadsheet,
   PackageOpen,
   PackagePlus,
@@ -14,82 +15,42 @@ import {
 } from "lucide-react";
 
 type Props = {
-  summary: TDashboardSummary;
+  items: readonly TDashboardKpiItem[];
 };
 
-export default function DashboardKpiGrid({ summary }: Props) {
-  const { kpis, scope } = summary;
+const KPI_ICONS = {
+  "shopping-bag": ShoppingBag,
+  wallet: Wallet,
+  "receipt-text": ReceiptText,
+  "package-open": PackageOpen,
+  "package-plus": PackagePlus,
+  "file-spreadsheet": FileSpreadsheet,
+  building: Building,
+  store: StoreIcon,
+  users: Users,
+} as const;
 
+export default function DashboardKpiGrid({ items }: Props) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-      <DashboardKpiTile
-        label="Orders"
-        kpi={kpis.orders}
-        icon={<ShoppingBag className="size-4" />}
-      />
-      <DashboardKpiTile
-        label="Revenue"
-        kpi={kpis.revenue}
-        format="currency"
-        icon={<Wallet className="size-4" />}
-      />
-      <DashboardKpiTile
-        label="Active products"
-        kpi={kpis.activeProducts}
-        icon={<PackageOpen className="size-4" />}
-      />
-      <DashboardKpiTile
-        label="Drafts"
-        kpi={kpis.draftProducts}
-        icon={<PackagePlus className="size-4" />}
-        invertDelta
-      />
-      <DashboardKpiTile
-        label="Imports"
-        kpi={kpis.imports}
-        icon={<FileSpreadsheet className="size-4" />}
-      />
-      {scope === "global" && kpis.stores && (
-        <DashboardKpiTile
-          label="Stores"
-          kpi={kpis.stores}
-          icon={<StoreIcon className="size-4" />}
-        />
-      )}
-      {scope === "global" && kpis.users && (
-        <DashboardKpiTile
-          label="Users"
-          kpi={kpis.users}
-          icon={<Users className="size-4" />}
-        />
-      )}
-      {scope === "vendor" && (
-        <DashboardKpiTile
-          label="Revenue per order"
-          kpi={deriveRevenuePerOrder(summary)}
-          format="currency"
-          icon={<ReceiptText className="size-4" />}
-        />
-      )}
+      {items.map((item) => {
+        const Icon = KPI_ICONS[item.icon];
+
+        return (
+          <DashboardKpiTile
+            key={item.key}
+            label={item.label}
+            kpi={{
+              value: item.value,
+              deltaPct: item.trend.delta_pct,
+              sparkline: item.trend.sparkline,
+            }}
+            format={item.format}
+            icon={<Icon className="size-4" aria-hidden />}
+            invertDelta={item.trend.positive_direction === "down"}
+          />
+        );
+      })}
     </div>
   );
-}
-
-function deriveRevenuePerOrder(summary: TDashboardSummary) {
-  const { orders, revenue } = summary.kpis;
-  const safeDivide = (num: number, den: number) => (den > 0 ? num / den : 0);
-  const value = safeDivide(revenue.value, orders.value);
-  const previous = safeDivide(revenue.previous, orders.previous);
-  const deltaPct =
-    previous === 0
-      ? value > 0
-        ? 100
-        : null
-      : Math.round(((value - previous) / previous) * 10000) / 100;
-  const sparkline = revenue.sparkline.map((rev, index) => {
-    const orderCount = orders.sparkline[index] ?? 0;
-    return orderCount > 0 ? rev / orderCount : 0;
-  });
-
-  return { value, previous, deltaPct, sparkline };
 }

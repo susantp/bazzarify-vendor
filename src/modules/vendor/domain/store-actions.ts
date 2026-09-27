@@ -5,11 +5,15 @@ import {
   getSessionUserUUID,
   setAuthUser,
 } from "@/modules/auth/data/lib/auth-lib";
+import { actionGetUser } from "@/modules/auth/domain/auth-actions";
 import StoreCreatePayloadSchema from "@/modules/auth/domain/schemas/payloads/StoreCreatePayloadSchema";
 import ApiResponseSchema from "@/modules/core/domain/schemas/ApiResponse";
 import { authAxiosInstance } from "@/modules/core/lib/utils.axios";
 import { handleRemoteError } from "@/modules/core/lib/utils.index";
-import { getCookieStore } from "@/modules/core/lib/utils.session";
+import {
+  getCookieStore,
+  setSelectedTenantUuid,
+} from "@/modules/core/lib/utils.session";
 import postDataAndValidate from "@/modules/core/utils/postDataAndValidate";
 import { formattedIssues } from "@/modules/core/utils/zod.util";
 import { BusinessAndEmailFormValues } from "@/modules/guest/config/schemas/set.business.email.form";
@@ -46,10 +50,28 @@ export const actionSetBusinessAndEmail = async (
         StoreCreatePayloadSchema,
         "Unable to create store.",
       );
-      await setAuthUser(userUUID, {
-        ...authUserRedis,
-        store: response.store,
-      });
+
+      const refreshedUser = await actionGetUser();
+      if ("error" in refreshedUser) {
+        throw refreshedUser.error;
+      }
+      const tenant = refreshedUser.tenants.find((workspace) =>
+        workspace.authorized_stores.some(
+          (store) => store.uuid === response.store.uuid,
+        ),
+      );
+      if (!tenant) {
+        throw new Error(
+          "The new store was not returned in an active workspace.",
+        );
+      }
+
+      await setSelectedTenantUuid(tenant.uuid);
+      const selectedUser = await actionGetUser();
+      if ("error" in selectedUser) {
+        throw selectedUser.error;
+      }
+      await setAuthUser(userUUID, selectedUser);
       return response.store;
     } catch (e) {
       return handleRemoteError(e);

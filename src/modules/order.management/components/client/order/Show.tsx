@@ -39,9 +39,11 @@ import { useTransition } from "react";
 
 export default function Show({
   order,
+  canFulfillOrders,
   canManageWholeOrder,
 }: {
   order: TOrder;
+  canFulfillOrders: boolean;
   canManageWholeOrder: boolean;
 }) {
   const {
@@ -64,6 +66,7 @@ export default function Show({
     shipping_total: 0,
     grand_total: 0,
   };
+  const canOfferFulfillmentActions = canFulfillOrders && !canManageWholeOrder;
 
   const itemRemainingQuantity = (item: TOrder["items"][number]) =>
     Math.max(0, item.qty_ordered - item.qty_canceled - item.qty_shipped);
@@ -226,7 +229,7 @@ export default function Show({
                   <TableHead>Discount</TableHead>
                   <TableHead>Shipping fee</TableHead>
                   <TableHead>Total</TableHead>
-                  {!canManageWholeOrder ? (
+                  {canOfferFulfillmentActions ? (
                     <TableHead>Item Actions</TableHead>
                   ) : null}
                 </TableRow>
@@ -269,7 +272,7 @@ export default function Show({
                     <TableCell className="text-right">
                       {item.row_total}
                     </TableCell>
-                    {!canManageWholeOrder ? (
+                    {canOfferFulfillmentActions ? (
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
@@ -331,7 +334,15 @@ export default function Show({
               <TableFooter className="text-end bg-transparent">
                 <TableRow>
                   <TableCell className="text-left">Sub Total</TableCell>
-                  <TableCell colSpan={canManageWholeOrder ? 5 : 6}>
+                  <TableCell
+                    colSpan={
+                      canManageWholeOrder
+                        ? 5
+                        : canOfferFulfillmentActions
+                          ? 6
+                          : 5
+                    }
+                  >
                     {canManageWholeOrder
                       ? order.sub_total
                       : scopedTotals.sub_total}
@@ -339,7 +350,15 @@ export default function Show({
                 </TableRow>
                 <TableRow>
                   <TableCell className="text-left">Discount</TableCell>
-                  <TableCell colSpan={canManageWholeOrder ? 5 : 6}>
+                  <TableCell
+                    colSpan={
+                      canManageWholeOrder
+                        ? 5
+                        : canOfferFulfillmentActions
+                          ? 6
+                          : 5
+                    }
+                  >
                     {canManageWholeOrder
                       ? order.discount_total
                       : scopedTotals.discount_total}
@@ -347,7 +366,15 @@ export default function Show({
                 </TableRow>
                 <TableRow>
                   <TableCell className="text-left">Tax</TableCell>
-                  <TableCell colSpan={canManageWholeOrder ? 5 : 6}>
+                  <TableCell
+                    colSpan={
+                      canManageWholeOrder
+                        ? 5
+                        : canOfferFulfillmentActions
+                          ? 6
+                          : 5
+                    }
+                  >
                     {canManageWholeOrder
                       ? order.tax_total
                       : scopedTotals.tax_total}
@@ -372,13 +399,13 @@ export default function Show({
                   <>
                     <TableRow>
                       <TableCell className="text-left">Shipping</TableCell>
-                      <TableCell colSpan={6}>
+                      <TableCell colSpan={canOfferFulfillmentActions ? 6 : 5}>
                         {scopedTotals.shipping_total}
                       </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell className="text-left">Your Total</TableCell>
-                      <TableCell colSpan={6}>
+                      <TableCell colSpan={canOfferFulfillmentActions ? 6 : 5}>
                         {scopedTotals.grand_total}
                       </TableCell>
                     </TableRow>

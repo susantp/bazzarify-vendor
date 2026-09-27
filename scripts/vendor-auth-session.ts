@@ -1,6 +1,5 @@
 import axios from "axios";
 import { SignJWT } from "jose";
-import { writeFile } from "node:fs/promises";
 
 type RemoteMeta = {
   error?: unknown;
@@ -23,11 +22,15 @@ type VendorUserEnvelope = {
     payload?: {
       user?: {
         uuid?: string;
-        roles?: Array<{ name?: string }>;
-        store?: {
+        platform_roles?: string[];
+        tenants?: Array<{
           uuid?: string | null;
-          store_type_uuid?: string | null;
-        } | null;
+          roles?: string[];
+          authorized_stores?: Array<{
+            uuid?: string | null;
+            store_type_uuid?: string | null;
+          }>;
+        }>;
       };
     } | null;
   };
@@ -80,10 +83,26 @@ const PERSONAS: Record<string, PersonaDefinition> = {
     credential: "vendor.store.multiple-categories@bazarify.local",
     password: VERIFICATION_PASSWORD,
   },
+  tenant_admin_multi_store: {
+    credential: "qa-tenant-admin@bazarify.local",
+    password: VERIFICATION_PASSWORD,
+  },
+  tenant_dual_member: {
+    credential: "qa-dual-member@bazarify.local",
+    password: VERIFICATION_PASSWORD,
+  },
+  tenant_vendor_single_store: {
+    credential: "qa-vendor-alpha@bazarify.local",
+    password: VERIFICATION_PASSWORD,
+  },
+  platform_super_admin: {
+    credential: "qa-platform-admin@bazarify.local",
+    password: VERIFICATION_PASSWORD,
+  },
 };
 
 function readRequiredEnv(name: string): string {
-  const value = process.env[name]?.trim();
+  const value = Bun.env[name]?.trim();
   if (!value) {
     throw new Error(`Missing required environment variable: ${name}`);
   }
@@ -171,16 +190,18 @@ async function writeOptionalArtifact(
     return;
   }
 
-  await writeFile(path, content, "utf8");
+  await Bun.write(path, content);
 }
 
 async function createSessionCookie({
   token,
   userUUID,
+  selectedTenantUuid,
   sessionSecret,
 }: {
   token: string;
   userUUID: string;
+  selectedTenantUuid: string | null;
   sessionSecret: string;
 }) {
   const encodedKey = new TextEncoder().encode(sessionSecret);
@@ -189,6 +210,7 @@ async function createSessionCookie({
   return new SignJWT({
     token,
     userUUID,
+    selectedTenantUuid,
     expiresAt,
   })
     .setProtectedHeader({ alg: "HS256" })
@@ -198,7 +220,7 @@ async function createSessionCookie({
 }
 
 async function main() {
-  const options = parseArgs(process.argv.slice(2));
+  const options = parseArgs(Bun.argv.slice(2));
   const apiUrl = readRequiredEnv("API_URL");
   const appKey = readRequiredEnv("APP_KEY");
   const sessionSecret = readRequiredEnv("SESSION_SECRET");
@@ -277,9 +299,24 @@ async function main() {
     throw new Error("Vendor user fetch did not return a user UUID.");
   }
 
+  const platformRoles = user?.platform_roles ?? [];
+  const tenants = user?.tenants ?? [];
+  const hasPlatformWorkspace = platformRoles.some(
+    (role) => role === "admin" || role === "super-admin",
+  );
+  const selectedTenantUuid =
+    !hasPlatformWorkspace && tenants.length === 1
+      ? (tenants[0].uuid ?? null)
+      : null;
+  const selectedWorkspace = tenants.find(
+    (tenant) => tenant.uuid === selectedTenantUuid,
+  );
+  const authorizedStore = selectedWorkspace?.authorized_stores?.[0];
+
   const sessionCookie = await createSessionCookie({
     token,
     userUUID,
+    selectedTenantUuid,
     sessionSecret,
   });
 
@@ -297,10 +334,11 @@ async function main() {
           (options.useDevDefaults ? "vendor_no_store" : null),
         credential,
         userUUID,
-        roles: user?.roles?.map((role) => role.name).filter(Boolean) ?? [],
-        hasStore: Boolean(user?.store?.uuid),
-        storeUUID: user?.store?.uuid ?? null,
-        storeTypeUUID: user?.store?.store_type_uuid ?? null,
+        roles: selectedWorkspace?.roles ?? platformRoles,
+        hasStore: Boolean(authorizedStore?.uuid),
+        selectedTenantUuid,
+        storeUUID: authorizedStore?.uuid ?? null,
+        storeTypeUUID: authorizedStore?.store_type_uuid ?? null,
         sessionCookie,
         cookieHeader,
         wroteCookiePath: options.writeCookiePath ?? null,
@@ -315,5 +353,5 @@ async function main() {
 await main().catch((error) => {
   const message = error instanceof Error ? error.message : String(error);
   console.error(message);
-  process.exit(1);
+  throw error;
 });

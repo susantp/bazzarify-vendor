@@ -1,6 +1,7 @@
 import { setAuthUser } from "@/modules/auth/data/lib/auth-lib";
 import SessionUserPayloadSchema from "@/modules/auth/domain/schemas/payloads/SessionUserPayloadSchema";
 import { TSessionUser } from "@/modules/auth/domain/schemas/UserSchema";
+import { getInitialTenantUuid } from "@/modules/auth/domain/workspace";
 import { defaultAxiosInstance } from "@/modules/core/lib/utils.axios";
 import { extractRemoteErrorFeedback } from "@/modules/core/lib/utils.feedback";
 import { handleRemoteError } from "@/modules/core/lib/utils.index";
@@ -148,10 +149,12 @@ async function handleBootstrap(personaName?: string) {
     }
 
     const sessionUser = parsed.data.user as TSessionUser;
+    const selectedTenantUuid = getInitialTenantUuid(sessionUser);
 
     await createAuthCookieSession({
       token,
       userUUID: sessionUser.uuid,
+      selectedTenantUuid,
     });
     await setAuthUser(sessionUser.uuid, sessionUser);
 
@@ -160,7 +163,9 @@ async function handleBootstrap(personaName?: string) {
         payload: {
           persona: personaName,
           userUUID: sessionUser.uuid,
-          hasStore: Boolean(sessionUser.store?.uuid),
+          hasStore: sessionUser.tenants.some(
+            (tenant) => tenant.authorized_stores.length > 0,
+          ),
         },
         message: "success",
       },

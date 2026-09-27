@@ -9,6 +9,7 @@ import {
   getAuthUser,
   getSessionUserUUID,
 } from "@/modules/auth/data/lib/auth-lib";
+import { getVendorStore } from "@/modules/auth/domain/workspace";
 import PageContainer from "@/modules/core/components/server/PageContainer";
 import { ThemedButton } from "@/modules/core/components/server/ThemedButton";
 import { getCookieStore } from "@/modules/core/lib/utils.session";
@@ -101,7 +102,8 @@ export default async function VendorCapabilitiesPage() {
     redirect("/login");
   }
 
-  if (!authUser.store) {
+  const store = getVendorStore(authUser);
+  if (!store) {
     return (
       <PageContainer pageTitle="Vendor Capability Profile">
         <Card>
@@ -121,15 +123,14 @@ export default async function VendorCapabilitiesPage() {
     );
   }
 
-  if (!isStoreProductAuthoringReady(authUser.store)) {
+  if (!isStoreProductAuthoringReady(store)) {
     return (
       <PageContainer pageTitle="Vendor Capability Profile">
         <Card>
           <CardHeader>
             <CardTitle>Product authoring is not ready</CardTitle>
             <CardDescription>
-              Category access is still being configured for{" "}
-              {authUser.store.name}.
+              Category access is still being configured for {store.name}.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -169,7 +170,7 @@ export default async function VendorCapabilitiesPage() {
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>{authUser.store.name}</CardTitle>
+            <CardTitle>{store.name}</CardTitle>
             <CardDescription>
               These capabilities are resolved by the backend from your assigned
               categories. They describe authoring support; they do not grant

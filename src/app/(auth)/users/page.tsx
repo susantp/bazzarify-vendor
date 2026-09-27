@@ -1,14 +1,9 @@
 import UsersServerTable from "@/modules/admin/users/components/client/UsersServerTable";
-import {
-  getAuthUser,
-  getSessionUserUUID,
-} from "@/modules/auth/data/lib/auth-lib";
 import { actionGetUsers } from "@/modules/auth/domain/auth-actions";
+import { requireWorkspaceCapability } from "@/modules/auth/domain/requireWorkspaceCapability";
 import PageContainer from "@/modules/core/components/server/PageContainer";
 import { TServerDataTableMeta } from "@/modules/core/domain/schemas/ServerDataTableMeta";
-import { getCookieStore } from "@/modules/core/lib/utils.session";
 import { flattenSearchParams } from "@/modules/core/utils/searchParams";
-import { redirect } from "next/navigation";
 
 const DISALLOWED_FILTER_KEYS = new Set([
   "filter[role]",
@@ -37,21 +32,7 @@ export default async function UsersPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const userUuid = await getSessionUserUUID(await getCookieStore());
-  if (!userUuid) {
-    redirect("/login");
-  }
-
-  const authUser = await getAuthUser(userUuid);
-  const isSuperAdmin =
-    authUser &&
-    typeof authUser === "object" &&
-    !("error" in authUser) &&
-    authUser.roles.some((role) => role.name === "super-admin");
-
-  if (!isSuperAdmin) {
-    redirect("/");
-  }
+  await requireWorkspaceCapability("canManagePlatformUsers", "/users");
 
   const resolvedSearchParams = await searchParams;
   const incomingParams = flattenSearchParams(resolvedSearchParams);

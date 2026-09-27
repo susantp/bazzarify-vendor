@@ -1,4 +1,4 @@
-import { getSessionUser } from "@/modules/auth/data/auth-service";
+import { requireWorkspaceCapability } from "@/modules/auth/domain/requireWorkspaceCapability";
 import PageContainer from "@/modules/core/components/server/PageContainer";
 import StoreOnboardingManagement from "@/modules/vendor/components/client/StoreOnboardingManagement";
 import { actionGetAdminStoreOnboardingStoreTypes } from "@/modules/vendor/domain/store-actions";
@@ -8,13 +8,12 @@ import { redirect } from "next/navigation";
 export default async function StoreOnboardingSettingsPage() {
   const requestHeaders = await headers();
   const isVendor = requestHeaders.get("host")?.startsWith("vendor.");
-  const sessionUser = await getSessionUser();
-  const hasAdminAccess =
-    sessionUser?.roles.some(
-      (role) => role.name === "super-admin" || role.name === "admin",
-    ) ?? false;
+  await requireWorkspaceCapability(
+    "canManagePlatformStoreOnboarding",
+    "/settings/store-onboarding",
+  );
 
-  if (isVendor || !hasAdminAccess) {
+  if (isVendor) {
     redirect("/");
   }
 

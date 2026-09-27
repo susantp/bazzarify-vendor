@@ -9,6 +9,7 @@ import {
   getAuthUser,
   getSessionUserUUID,
 } from "@/modules/auth/data/lib/auth-lib";
+import { getVendorStore } from "@/modules/auth/domain/workspace";
 import PageContainer from "@/modules/core/components/server/PageContainer";
 import { ThemedButton } from "@/modules/core/components/server/ThemedButton";
 import { getCookieStore } from "@/modules/core/lib/utils.session";
@@ -25,17 +26,21 @@ export default async function StoreCreatedPage() {
   }
 
   const authUser = await getAuthUser(userUuid);
-  if (!authUser || "error" in authUser || !authUser.store) {
+  if (!authUser || "error" in authUser) {
+    redirect("/store-required");
+  }
+  const store = getVendorStore(authUser);
+  if (!store) {
     redirect("/store-required");
   }
 
-  if (!isStoreProductAuthoringReady(authUser.store)) {
+  if (!isStoreProductAuthoringReady(store)) {
     redirect(buildStoreRemediationPath());
   }
 
   const storeTypeOptions = await actionGetStoreTypeOptions();
   const selectedStoreType = storeTypeOptions.find(
-    (option) => option.uuid === authUser.store?.store_type_uuid,
+    (option) => option.uuid === store.store_type_uuid,
   );
   const starterCategories =
     selectedStoreType?.onboarding_category_set?.categories ?? [];

@@ -1,3 +1,4 @@
+import WorkspaceStoreFilter from "@/modules/auth/components/server/WorkspaceStoreFilter";
 import {
   getAuthUser,
   getSessionUserUUID,
@@ -5,11 +6,8 @@ import {
 import PageContainer from "@/modules/core/components/server/PageContainer";
 import { getCookieStore } from "@/modules/core/lib/utils.session";
 import { actionGetDashboardSummary } from "@/modules/dashboard/actions/getDashboardSummary";
-import DashboardAttentionList from "@/modules/dashboard/components/client/DashboardAttentionList";
-import DashboardKpiGrid from "@/modules/dashboard/components/client/DashboardKpiGrid";
 import DashboardPeriodToggle from "@/modules/dashboard/components/client/DashboardPeriodToggle";
-import DashboardRecentActivity from "@/modules/dashboard/components/client/DashboardRecentActivity";
-import DashboardTopStores from "@/modules/dashboard/components/client/DashboardTopStores";
+import DashboardSurfaceRenderer from "@/modules/dashboard/components/server/DashboardSurfaceRenderer";
 import {
   DASHBOARD_WINDOWS,
   type DashboardWindow,
@@ -18,7 +16,7 @@ import { AlertTriangle } from "lucide-react";
 import { redirect } from "next/navigation";
 
 type Props = {
-  searchParams?: Promise<{ window?: string }>;
+  searchParams?: Promise<{ window?: string; store_uuid?: string }>;
 };
 
 const resolveWindow = (raw?: string): DashboardWindow =>
@@ -39,7 +37,11 @@ export default async function DashboardContainer({ searchParams }: Props) {
     return null;
   }
 
-  const result = await actionGetDashboardSummary(window);
+  const activeStores = authUser.authorized_stores.map(({ uuid, name }) => ({
+    uuid,
+    name,
+  }));
+  const result = await actionGetDashboardSummary(window, params.store_uuid);
 
   if ("error" in result) {
     if (result.errorCode === 403) {
@@ -56,34 +58,30 @@ export default async function DashboardContainer({ searchParams }: Props) {
     );
   }
 
-  const greeting = authUser?.email ? `, ${authUser.email}` : "";
+  const { surface } = result;
 
   return (
     <PageContainer
-      pageTitle="Dashboard"
-      actionSlot={<DashboardPeriodToggle currentWindow={window} />}
+      pageTitle={surface.heading}
+      actionSlot={
+        <div className="flex flex-wrap items-end justify-end gap-3">
+          <WorkspaceStoreFilter
+            actionPath="/"
+            parameterName="store_uuid"
+            preservedParameters={{ window }}
+            selectedStoreUuid={params.store_uuid}
+            stores={activeStores}
+          />
+          <DashboardPeriodToggle
+            currentWindow={result.period.window}
+            choices={surface.period_choices}
+          />
+        </div>
+      }
     >
       <div className="space-y-4">
-        <p className="text-muted-foreground text-sm">
-          Overview of your {result.scope === "global" ? "platform" : "store"}
-          {greeting} for the last {window.replace("d", " days")}.
-        </p>
-        <DashboardKpiGrid summary={result} />
-        {result.attention.length > 0 ? (
-          <div className="grid items-stretch gap-4 lg:grid-cols-5">
-            <div className="lg:col-span-2">
-              <DashboardAttentionList items={result.attention} />
-            </div>
-            <div className="lg:col-span-3">
-              <DashboardRecentActivity items={result.recent} />
-            </div>
-          </div>
-        ) : (
-          <DashboardRecentActivity items={result.recent} />
-        )}
-        {result.scope === "global" && result.topStores.length > 0 && (
-          <DashboardTopStores stores={result.topStores} />
-        )}
+        <p className="text-muted-foreground text-sm">{surface.description}</p>
+        <DashboardSurfaceRenderer surface={surface} />
       </div>
     </PageContainer>
   );

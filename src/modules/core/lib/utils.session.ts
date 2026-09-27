@@ -32,17 +32,31 @@ export async function getSessionDecrypted(
   if (!payload) return null;
   return payload;
 }
+export async function getSelectedTenantUuid(): Promise<string | null> {
+  const payload = await getSessionDecrypted(await getCookieStore());
+  const selectedTenantUuid = payload?.selectedTenantUuid;
+
+  return typeof selectedTenantUuid === "string" ? selectedTenantUuid : null;
+}
+
 export async function createAuthCookieSession({
   token,
   userUUID,
+  selectedTenantUuid = null,
 }: {
   token: string;
   userUUID: string | null;
+  selectedTenantUuid?: string | null;
 }): Promise<void> {
   try {
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-    const session = await new SignJWT({ token, userUUID, expiresAt })
+    const session = await new SignJWT({
+      token,
+      userUUID,
+      selectedTenantUuid,
+      expiresAt,
+    })
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
       .setExpirationTime("7d")
@@ -60,6 +74,25 @@ export async function createAuthCookieSession({
     console.log("cookie storing error: ", error);
     throw error;
   }
+}
+
+export async function setSelectedTenantUuid(
+  selectedTenantUuid: string | null,
+): Promise<void> {
+  const payload = await getSessionDecrypted(await getCookieStore());
+  if (
+    !payload ||
+    typeof payload.token !== "string" ||
+    typeof payload.userUUID !== "string"
+  ) {
+    throw new Error("An authenticated session is required to select a tenant.");
+  }
+
+  await createAuthCookieSession({
+    token: payload.token,
+    userUUID: payload.userUUID,
+    selectedTenantUuid,
+  });
 }
 
 export async function deleteSession({

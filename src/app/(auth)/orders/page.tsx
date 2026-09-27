@@ -1,4 +1,6 @@
-import { getSessionUser } from "@/modules/auth/data/auth-service";
+import WorkspaceStoreFilter from "@/modules/auth/components/server/WorkspaceStoreFilter";
+import { requireWorkspaceCapability } from "@/modules/auth/domain/requireWorkspaceCapability";
+import { getWorkspaceCapabilities } from "@/modules/auth/domain/workspace-capabilities";
 import PageContainer from "@/modules/core/components/server/PageContainer";
 import { flattenSearchParams } from "@/modules/core/utils/searchParams";
 import { actionGetOrders } from "@/modules/order.management/actions/actionGetOrders";
@@ -13,9 +15,12 @@ export default async function OrdersPage({
   const resolvedSearchParams = await searchParams;
   const flattenedParams = flattenSearchParams(resolvedSearchParams);
   const page = Number(flattenedParams.page ?? "1");
-  const sessionUser = await getSessionUser();
+  const sessionUser = await requireWorkspaceCapability(
+    "canViewOrders",
+    "/orders",
+  );
   const canManageWholeOrder =
-    sessionUser?.roles.some((role) => role.name === "super-admin") ?? false;
+    getWorkspaceCapabilities(sessionUser).canManageWholeOrder;
 
   const [ordersResponse, statusOptionsResponse] = await Promise.all([
     actionGetOrders({
@@ -42,7 +47,21 @@ export default async function OrdersPage({
     : [];
 
   return (
-    <PageContainer pageTitle="Manage Orders">
+    <PageContainer
+      pageTitle="Manage Orders"
+      actionSlot={
+        <WorkspaceStoreFilter
+          actionPath="/orders"
+          parameterName="filter[store_uuid]"
+          preservedParameters={flattenedParams}
+          selectedStoreUuid={flattenedParams["filter[store_uuid]"]}
+          stores={sessionUser.authorized_stores.map(({ uuid, name }) => ({
+            uuid,
+            name,
+          }))}
+        />
+      }
+    >
       <OrdersServerTable
         rows={orders?.data ?? []}
         table={

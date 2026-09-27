@@ -6,6 +6,7 @@ import {
 } from "@/modules/auth/data/lib/auth-lib";
 import { actionGetUser } from "@/modules/auth/domain/auth-actions";
 import { TSessionUser } from "@/modules/auth/domain/schemas/UserSchema";
+import { getInitialTenantUuid } from "@/modules/auth/domain/workspace";
 import { defaultAxiosInstance } from "@/modules/core/lib/utils.axios";
 import { extractRemoteErrorFeedback } from "@/modules/core/lib/utils.feedback";
 import { handleRemoteError } from "@/modules/core/lib/utils.index";
@@ -59,11 +60,20 @@ export const actionLogin = async (data: LoginFormValues) => {
     if ("error" in userResponse) {
       throw userResponse.error;
     }
-    const sessionUser: TSessionUser = userResponse;
+    let sessionUser: TSessionUser = userResponse;
+    const selectedTenantUuid = getInitialTenantUuid(sessionUser);
     await createAuthCookieSession({
       token: tokenPlainText,
       userUUID: sessionUser.uuid,
+      selectedTenantUuid,
     });
+    if (selectedTenantUuid) {
+      const selectedUserResponse = await actionGetUser();
+      if ("error" in selectedUserResponse) {
+        throw selectedUserResponse.error;
+      }
+      sessionUser = selectedUserResponse;
+    }
     await setAuthUser(sessionUser.uuid, sessionUser);
   } catch (error: unknown) {
     return handleRemoteError(error);

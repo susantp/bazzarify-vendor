@@ -84,7 +84,9 @@ import {
 } from "@/modules/product.management/utils/sanitizeRichHtml";
 
 interface Props {
-  productPayload: TEditProductPayload;
+  productPayload: Pick<TEditProductPayload, "product"> &
+    Partial<Pick<TEditProductPayload, "categoryAncestors" | "categoryContext">>;
+  canEdit?: boolean;
   canPublish?: boolean;
 }
 
@@ -262,6 +264,7 @@ const VariantAttributeChips = ({ variant }: { variant: TVariant }) => {
 
 export default function ProductInspectionView({
   productPayload,
+  canEdit = true,
   canPublish = false,
 }: Props) {
   const [product, setProduct] = useState<TProduct>(productPayload.product);
@@ -356,79 +359,86 @@ export default function ProductInspectionView({
       actionSlot={
         <div className="flex items-center gap-2">
           <BackLinkButton href="/products" label="Back" />
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className="hidden sm:inline-flex"
-          >
-            <Link href={`/products/${product.uuid}/edit`}>
-              <Pencil className="mr-1.5 h-3.5 w-3.5" />
-              Edit
-            </Link>
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="default"
-                size="sm"
-                disabled={isPending || transitions.length === 0}
-              >
-                {isPending ? (
-                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Settings2 className="mr-1.5 h-3.5 w-3.5" />
-                )}
-                Status
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64">
-              <DropdownMenuLabel className="text-xs">
-                Current:{" "}
-                <Badge className={cn("ml-1", statusBadge.className)}>
-                  {statusBadge.label}
-                </Badge>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {transitions.length === 0 ? (
-                <DropdownMenuItem disabled>
-                  No available transitions
-                </DropdownMenuItem>
-              ) : (
-                transitions.map((transition) => (
-                  <DropdownMenuItem
-                    key={transition.status}
-                    onSelect={(event) => {
-                      event.preventDefault();
-                      if (
-                        product.status === PRODUCT_STATUS.PENDING &&
-                        transition.status === PRODUCT_STATUS.ACTIVE
-                      ) {
-                        handlePublish();
-                      } else {
-                        handleStatusChange(transition.status, transition.label);
-                      }
-                    }}
-                    disabled={isPending}
-                    className={cn(
-                      "flex flex-col items-start gap-0.5 py-2",
-                      transition.tone === "danger" && "text-destructive",
-                    )}
-                  >
-                    <span className="text-sm font-medium">
-                      {transition.label}
-                      {pendingStatus === transition.status ? (
-                        <Loader2 className="ml-2 inline h-3 w-3 animate-spin" />
-                      ) : null}
-                    </span>
-                    <span className="text-[11px] text-muted-foreground">
-                      {transition.description}
-                    </span>
+          {canEdit ? (
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="hidden sm:inline-flex"
+            >
+              <Link href={`/products/${product.uuid}/edit`}>
+                <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                Edit
+              </Link>
+            </Button>
+          ) : null}
+          {canEdit || canPublish ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="default"
+                  size="sm"
+                  disabled={isPending || transitions.length === 0}
+                >
+                  {isPending ? (
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Settings2 className="mr-1.5 h-3.5 w-3.5" />
+                  )}
+                  Status
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel className="text-xs">
+                  Current:{" "}
+                  <Badge className={cn("ml-1", statusBadge.className)}>
+                    {statusBadge.label}
+                  </Badge>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {transitions.length === 0 ? (
+                  <DropdownMenuItem disabled>
+                    No available transitions
                   </DropdownMenuItem>
-                ))
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                ) : (
+                  transitions.map((transition) => (
+                    <DropdownMenuItem
+                      key={transition.status}
+                      onSelect={(event) => {
+                        event.preventDefault();
+                        if (
+                          product.status === PRODUCT_STATUS.PENDING &&
+                          transition.status === PRODUCT_STATUS.ACTIVE
+                        ) {
+                          handlePublish();
+                        } else {
+                          handleStatusChange(
+                            transition.status,
+                            transition.label,
+                          );
+                        }
+                      }}
+                      disabled={isPending}
+                      className={cn(
+                        "flex flex-col items-start gap-0.5 py-2",
+                        transition.tone === "danger" && "text-destructive",
+                      )}
+                    >
+                      <span className="text-sm font-medium">
+                        {transition.label}
+                        {pendingStatus === transition.status ? (
+                          <Loader2 className="ml-2 inline h-3 w-3 animate-spin" />
+                        ) : null}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {transition.description}
+                      </span>
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
         </div>
       }
     >

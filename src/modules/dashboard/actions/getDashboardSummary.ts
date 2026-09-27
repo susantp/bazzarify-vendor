@@ -20,13 +20,16 @@ const isValidWindow = (value: string): value is DashboardWindow =>
 
 export const actionGetDashboardSummary = async (
   window: string = "7d",
+  storeUuid?: string,
 ): Promise<DashboardResult> => {
   const safeWindow: DashboardWindow = isValidWindow(window) ? window : "7d";
 
   try {
     const client = await authAxiosInstance();
+    const searchParams = new URLSearchParams({ window: safeWindow });
+    if (storeUuid) searchParams.set("store_uuid", storeUuid);
     const response = await client.get(
-      `/dashboard/summary?window=${encodeURIComponent(safeWindow)}`,
+      `/dashboard/summary?${searchParams.toString()}`,
     );
 
     const parsed = ApiResponseSchema(DashboardSummaryPayloadSchema).safeParse(

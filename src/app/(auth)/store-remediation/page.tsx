@@ -9,6 +9,7 @@ import {
   getAuthUser,
   getSessionUserUUID,
 } from "@/modules/auth/data/lib/auth-lib";
+import { getVendorStore } from "@/modules/auth/domain/workspace";
 import PageContainer from "@/modules/core/components/server/PageContainer";
 import { ThemedButton } from "@/modules/core/components/server/ThemedButton";
 import { getCookieStore } from "@/modules/core/lib/utils.session";
@@ -45,11 +46,12 @@ export default async function StoreRemediationPage({
     redirect("/login");
   }
 
-  if (!authUser.store) {
+  const store = getVendorStore(authUser);
+  if (!store) {
     redirect(buildStoreRequirementPath(safeReturnTo ?? "/products"));
   }
 
-  if (isStoreProductAuthoringReady(authUser.store)) {
+  if (isStoreProductAuthoringReady(store)) {
     redirect(safeReturnTo ?? "/products");
   }
 
@@ -72,8 +74,8 @@ export default async function StoreRemediationPage({
               automatically.
             </div>
             <div className="rounded-md border bg-slate-50 p-4 text-sm text-slate-700">
-              {typeof authUser.store.category_count === "number"
-                ? `Current assigned category count: ${authUser.store.category_count}.`
+              {typeof store.category_count === "number"
+                ? `Current assigned category count: ${store.category_count}.`
                 : "Current assigned category count is unavailable right now."}
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
