@@ -1,18 +1,13 @@
 import WorkspaceSwitchForm from "@/modules/auth/components/client/WorkspaceSwitchForm";
 import type { TSessionUser } from "@/modules/auth/domain/schemas/UserSchema";
+import { hasPlatformAdministratorRole } from "@/modules/auth/domain/workspace";
 import Link from "next/link";
-
-function canUsePlatformWorkspace(user: TSessionUser): boolean {
-  return user.platform_roles.some(
-    (role) => role === "admin" || role === "super-admin",
-  );
-}
 
 export default function WorkspaceSwitcher({ user }: { user: TSessionUser }) {
   return (
     <div className="space-y-2 px-4 pb-3">
       <WorkspaceSwitchForm
-        canUsePlatformWorkspace={canUsePlatformWorkspace(user)}
+        canUsePlatformWorkspace={hasPlatformAdministratorRole(user)}
         currentTenantUuid={user.current_tenant_uuid}
         tenants={user.tenants}
       />

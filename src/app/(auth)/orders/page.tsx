@@ -1,5 +1,6 @@
 import WorkspaceStoreFilter from "@/modules/auth/components/server/WorkspaceStoreFilter";
 import { requireWorkspaceCapability } from "@/modules/auth/domain/requireWorkspaceCapability";
+import { getWorkspaceCapabilities } from "@/modules/auth/domain/workspace-capabilities";
 import PageContainer from "@/modules/core/components/server/PageContainer";
 import { flattenSearchParams } from "@/modules/core/utils/searchParams";
 import { actionGetOrders } from "@/modules/order.management/actions/actionGetOrders";
@@ -18,9 +19,8 @@ export default async function OrdersPage({
     "canViewOrders",
     "/orders",
   );
-  const canManageWholeOrder = sessionUser.roles.some(
-    (role) => role.name === "super-admin",
-  );
+  const canManageWholeOrder =
+    getWorkspaceCapabilities(sessionUser).canManageWholeOrder;
 
   const [ordersResponse, statusOptionsResponse] = await Promise.all([
     actionGetOrders({

@@ -1,12 +1,8 @@
-import {
-  getAuthUser,
-  getSessionUserUUID,
-} from "@/modules/auth/data/lib/auth-lib";
 import { requireWorkspaceCapability } from "@/modules/auth/domain/requireWorkspaceCapability";
+import { getWorkspaceCapabilities } from "@/modules/auth/domain/workspace-capabilities";
 import ErrorComponent from "@/modules/core/components/client/ErrorComponent";
 import BackLinkButton from "@/modules/core/components/server/BackLinkButton";
 import PageContainer from "@/modules/core/components/server/PageContainer";
-import { getCookieStore } from "@/modules/core/lib/utils.session";
 import { TProductImportTargetStore } from "@/modules/product.management";
 import {
   actionGetActiveProductImport,
@@ -17,10 +13,12 @@ import ProductImportUploadForm from "@/modules/product.management/components/cli
 import { redirect } from "next/navigation";
 
 export default async function NewProductImportPage() {
-  await requireWorkspaceCapability(
+  const user = await requireWorkspaceCapability(
     "canImportProducts",
     "/products/imports/new",
   );
+  const canManageAcrossStores =
+    getWorkspaceCapabilities(user).canManageAcrossStores;
   const guidePayload = await actionGetProductImportGuide();
 
   if ("error" in guidePayload) {
@@ -49,20 +47,10 @@ export default async function NewProductImportPage() {
     redirect(`/products/imports/${activePayload.active_import.uuid}?resumed=1`);
   }
 
-  const userUuid = await getSessionUserUUID(await getCookieStore());
-  const authUser = userUuid ? await getAuthUser(userUuid) : null;
-  const isAdmin = Boolean(
-    authUser &&
-    !("error" in authUser) &&
-    authUser.roles.some(
-      (role) => role.name === "super-admin" || role.name === "admin",
-    ),
-  );
-
   let initialStoreOptions: TProductImportTargetStore[] = [];
   let initialStoreOptionsError: string | null = null;
 
-  if (isAdmin) {
+  if (canManageAcrossStores) {
     const storeOptionsPayload = await actionGetProductImportTargetStores();
     if ("error" in storeOptionsPayload) {
       initialStoreOptionsError = storeOptionsPayload.error;

@@ -26,6 +26,7 @@ type WorkspaceCapability = keyof Pick<
   | "canViewOrders"
   | "canReviewProducts"
   | "canManageTenantMembers"
+  | "canManagePlatformStoreOnboarding"
   | "canManagePlatformUsers"
   | "canManagePlatformVendors"
 >;

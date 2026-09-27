@@ -10,9 +10,12 @@ export type WorkspaceCapabilities = {
   canImportProducts: boolean;
   canViewOrders: boolean;
   canFulfillOrders: boolean;
+  canManageWholeOrder: boolean;
+  canManageAcrossStores: boolean;
   canReviewProducts: boolean;
   canManageTenantMembers: boolean;
   canManagePlatformCatalog: boolean;
+  canManagePlatformStoreOnboarding: boolean;
   canManagePlatformUsers: boolean;
   canManagePlatformVendors: boolean;
   isVendorIdentity: boolean;
@@ -64,10 +67,13 @@ export function getWorkspaceCapabilities(
     canViewOrders: isPlatformAdmin || canUseOperationalWorkspace,
     canFulfillOrders:
       isPlatformSuperAdmin || (isTenantWorkspace && tenantRoles.has("vendor")),
+    canManageWholeOrder: isPlatformSuperAdmin,
+    canManageAcrossStores: isPlatformAdmin,
     canReviewProducts: isPlatformAdmin,
     canManageTenantMembers:
       isTenantWorkspace && tenantRoles.has("tenant-admin"),
     canManagePlatformCatalog: isPlatformAdmin,
+    canManagePlatformStoreOnboarding: isPlatformAdmin,
     canManagePlatformUsers: isPlatformSuperAdmin,
     canManagePlatformVendors: isPlatformSuperAdmin,
     isVendorIdentity,
