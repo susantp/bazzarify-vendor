@@ -1,4 +1,5 @@
 import { requireWorkspaceCapability } from "@/modules/auth/domain/requireWorkspaceCapability";
+import { getWorkspaceCapabilities } from "@/modules/auth/domain/workspace-capabilities";
 import ErrorComponent from "@/modules/core/components/client/ErrorComponent";
 import PageContainer from "@/modules/core/components/server/PageContainer";
 import { TServerDataTableMeta } from "@/modules/core/domain/schemas/ServerDataTableMeta";
@@ -33,9 +34,8 @@ export default async function ProductImportsPage({
     );
   }
 
-  const canManageAcrossStores = user.platform_roles.some(
-    (role) => role === "super-admin" || role === "admin",
-  );
+  const canManageAcrossStores =
+    getWorkspaceCapabilities(user).canManageAcrossStores;
 
   const imports = response.imports;
 

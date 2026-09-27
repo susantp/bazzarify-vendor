@@ -24,9 +24,7 @@ export default async function OrderPage({
   if ("error" in order) {
     return <div>Something went wrong.</div>;
   }
-  const canManageWholeOrder = sessionUser.roles.some(
-    (role) => role.name === "super-admin",
-  );
+  const canManageWholeOrder = capabilities.canManageWholeOrder;
   return (
     <PageContainer
       pageTitle={`Order ${order.order_number}`}

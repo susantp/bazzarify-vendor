@@ -41,9 +41,23 @@ test("platform authority is active only in the platform workspace", () => {
 
   expect(platformAdmin.workspace).toBe("platform");
   expect(platformAdmin.canReviewProducts).toBe(true);
+  expect(platformAdmin.canManageWholeOrder).toBe(false);
+  expect(platformAdmin.canManageAcrossStores).toBe(true);
+  expect(platformAdmin.canManagePlatformStoreOnboarding).toBe(true);
+
+  const platformSuperAdmin = getWorkspaceCapabilities(
+    sessionUser({ platformRoles: ["super-admin"] }),
+  );
+  expect(platformSuperAdmin.canManageWholeOrder).toBe(true);
+  expect(platformSuperAdmin.canManageAcrossStores).toBe(true);
+  expect(platformSuperAdmin.canManagePlatformStoreOnboarding).toBe(true);
+
   expect(tenantAdmin.workspace).toBe("tenant");
   expect(tenantAdmin.canReviewProducts).toBe(false);
   expect(tenantAdmin.canManageTenantMembers).toBe(true);
+  expect(tenantAdmin.canManageWholeOrder).toBe(false);
+  expect(tenantAdmin.canManageAcrossStores).toBe(false);
+  expect(tenantAdmin.canManagePlatformStoreOnboarding).toBe(false);
 });
 
 test("tenant staff can read scoped operational pages without vendor writes", () => {
@@ -62,6 +76,9 @@ test("tenant staff can read scoped operational pages without vendor writes", () 
     expect(capabilities.canImportProducts).toBe(false);
     expect(capabilities.canFulfillOrders).toBe(false);
     expect(capabilities.canReviewProducts).toBe(false);
+    expect(capabilities.canManageWholeOrder).toBe(false);
+    expect(capabilities.canManageAcrossStores).toBe(false);
+    expect(capabilities.canManagePlatformStoreOnboarding).toBe(false);
   }
 });
 
@@ -78,6 +95,9 @@ test("vendor workspace keeps owned-store authoring and fulfillment capabilities"
   expect(capabilities.canFulfillOrders).toBe(true);
   expect(capabilities.canReviewProducts).toBe(false);
   expect(capabilities.canManageTenantMembers).toBe(false);
+  expect(capabilities.canManageWholeOrder).toBe(false);
+  expect(capabilities.canManageAcrossStores).toBe(false);
+  expect(capabilities.canManagePlatformStoreOnboarding).toBe(false);
 });
 
 test("unselected accounts receive no operational or platform capabilities", () => {
@@ -88,4 +108,7 @@ test("unselected accounts receive no operational or platform capabilities", () =
   expect(capabilities.canViewProducts).toBe(false);
   expect(capabilities.canViewOrders).toBe(false);
   expect(capabilities.canReviewProducts).toBe(false);
+  expect(capabilities.canManageWholeOrder).toBe(false);
+  expect(capabilities.canManageAcrossStores).toBe(false);
+  expect(capabilities.canManagePlatformStoreOnboarding).toBe(false);
 });

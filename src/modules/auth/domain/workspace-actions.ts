@@ -7,6 +7,7 @@ import {
 } from "@/modules/auth/data/lib/auth-lib";
 import { actionGetUser } from "@/modules/auth/domain/auth-actions";
 import { resolveTenantWorkspaceForHost } from "@/modules/auth/domain/tenant-host";
+import { hasPlatformAdministratorRole } from "@/modules/auth/domain/workspace";
 import ApiResponseSchema from "@/modules/core/domain/schemas/ApiResponse";
 import { authAxiosInstance } from "@/modules/core/lib/utils.axios";
 import { handleRemoteError } from "@/modules/core/lib/utils.index";
@@ -59,10 +60,6 @@ export async function actionGetTenantInvitations() {
   }
 }
 
-function isPlatformWorkspaceAvailable(roles: string[]): boolean {
-  return roles.some((role) => role === "admin" || role === "super-admin");
-}
-
 function completeWorkspaceSelection(completion: "dashboard" | "stay"): void {
   revalidatePath("/", "layout");
   if (completion === "stay") {
@@ -95,7 +92,7 @@ async function selectWorkspace(
     if (hostWorkspace) {
       redirect("/workspace?error=host-workspace-locked");
     }
-    if (!isPlatformWorkspaceAvailable(user.platform_roles)) {
+    if (!hasPlatformAdministratorRole(user)) {
       redirect("/workspace?error=invalid-workspace");
     }
     await setSelectedTenantUuid(null);
