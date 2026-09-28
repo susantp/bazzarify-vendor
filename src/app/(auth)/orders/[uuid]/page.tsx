@@ -35,6 +35,15 @@ export default async function OrderPage({
           order={order}
           canFulfillOrders={capabilities.canFulfillOrders}
           canManageWholeOrder={canManageWholeOrder}
+          canRequestRefunds={
+            capabilities.canManageWholeOrder ||
+            capabilities.canManageTenantMembers ||
+            capabilities.canFulfillOrders
+          }
+          canManageRefunds={
+            capabilities.canManageWholeOrder ||
+            capabilities.canManageTenantMembers
+          }
         />
       </Suspense>
     </PageContainer>

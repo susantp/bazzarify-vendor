@@ -13,6 +13,15 @@ const order: IRoute["order"] = {
   itemFulfillment: {
     path: "/order-management/orders/:orderId/items/:itemId/fulfillment",
   },
+  itemRefunds: {
+    path: "/order-management/orders/:orderId/allocations/:allocationId/items/:itemId/refunds",
+  },
+  refundDecision: {
+    path: "/order-management/orders/:orderId/refunds/:refundId",
+  },
+  refundConfirmReturned: {
+    path: "/order-management/orders/:orderId/refunds/:refundId/confirm-returned",
+  },
   statuses: {
     path: "/order-management/orders/statuses",
   },
