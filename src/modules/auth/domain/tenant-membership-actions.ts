@@ -29,14 +29,21 @@ function redirectActionError(): never {
 
 function getFormRoleAndStoreUuids(formData: FormData) {
   const role = String(formData.get("role") ?? "");
+  const vendorStoreUuid = formData.get("vendor_store_uuid");
+  const storeUuids =
+    role === "operator"
+      ? formData
+          .getAll("store_uuids")
+          .filter((value): value is string => typeof value === "string")
+      : role === "vendor" &&
+          typeof vendorStoreUuid === "string" &&
+          vendorStoreUuid.length > 0
+        ? [vendorStoreUuid]
+        : [];
+
   return {
     role,
-    store_uuids:
-      role === "operator"
-        ? formData
-            .getAll("store_uuids")
-            .filter((value): value is string => typeof value === "string")
-        : [],
+    store_uuids: storeUuids,
   };
 }
 

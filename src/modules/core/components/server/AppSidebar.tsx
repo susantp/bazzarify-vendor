@@ -84,6 +84,13 @@ const tenantMembershipNavigation: TMenuEntry = {
   icon: FaUsers,
 };
 
+const tenantStoresNavigation: TMenuEntry = {
+  type: "link",
+  title: "Stores",
+  path: "/workspace/stores",
+  icon: FaStore,
+};
+
 const onboardingNavigation: TMenuEntry = {
   type: "link",
   title: "Onboarding",
@@ -101,6 +108,9 @@ function canViewNavigation(
 
   if (entry.path === "/") return capabilities.canViewDashboard;
   if (entry.path === "/onboarding") return capabilities.isVendorIdentity;
+  if (entry.path === "/workspace/stores") {
+    return capabilities.canManageTenantMembers;
+  }
   if (entry.path === "/products/reviews") {
     return capabilities.canReviewProducts;
   }
@@ -206,7 +216,7 @@ export async function AppSidebar({ className }: { className?: string }) {
           : [
               ...vendorNavigations,
               ...(capabilities.canManageTenantMembers
-                ? [tenantMembershipNavigation]
+                ? [tenantStoresNavigation, tenantMembershipNavigation]
                 : []),
             ]
         : capabilities?.isVendorIdentity

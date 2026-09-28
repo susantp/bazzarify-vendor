@@ -9,7 +9,7 @@ export const ProductImportTargetStoreSchema = z
     phone: z.string().nullable(),
     sellable_category_count: z.number().int().nonnegative(),
     product_authoring_ready: z.boolean(),
-    owner: z
+    assigned_vendor: z
       .object({
         uuid: z.uuid(),
         name: z.string().nullable(),

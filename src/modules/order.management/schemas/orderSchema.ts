@@ -51,7 +51,6 @@ export const OrderItemSchema = z
     row_total: z.float64().nonnegative().nonoptional(),
     created_by_user_uuid: z.uuid().nullable().optional(),
     store_uuid: z.uuid().nullable().optional(),
-    vendor: UserSchema.nullable(),
     store: StoreSummarySchema.nullable().optional(),
     meta: z.record(z.any(), z.string()).nullable(), // JSON column
     created_at: z.iso.datetime().optional(),

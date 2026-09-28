@@ -17,14 +17,12 @@ const ItemCell = ({ item, className }: Props) => {
         .join(", ")}
     </p>
   ) : null;
-  const vendor = item.vendor ? <p>Vendor: {item.vendor.name}</p> : null;
   const store = item.store ? <p>Store: {item.store.name}</p> : null;
   return (
     <div className={className}>
       <p className="font-semibold">{item.name}</p>
       {options}
       {store}
-      {vendor}
     </div>
   );
 };

@@ -4,7 +4,7 @@ import { z } from "zod";
 
 export const TenantAuthorizedStoreSchema = StoreSchema.pick({
   uuid: true,
-  user_uuid: true,
+  assigned_vendor_user_uuid: true,
   store_type_uuid: true,
   name: true,
   slug: true,
