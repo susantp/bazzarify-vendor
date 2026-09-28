@@ -220,7 +220,7 @@ export type TProductImportTargetStore = {
   phone: string | null;
   sellable_category_count: number;
   product_authoring_ready: boolean;
-  owner: {
+  assigned_vendor: {
     uuid: string;
     name: string | null;
     email: string | null;
