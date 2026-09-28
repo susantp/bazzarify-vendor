@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/table";
 import { toTitleCase } from "@/modules/core/utils";
 import { actionUpdateOrderItemFulfillment } from "@/modules/order.management/actions/actionUpdateOrderItemFulfillment";
+import RefundActions from "@/modules/order.management/components/client/order/RefundActions";
 import ItemCell from "@/modules/order.management/components/client/orderItem/ItemCell";
 import useOrderShow from "@/modules/order.management/hooks/order/useOrderShow";
 import { TOrder } from "@/modules/order.management/schemas/orderSchema";
@@ -41,10 +42,14 @@ export default function Show({
   order,
   canFulfillOrders,
   canManageWholeOrder,
+  canRequestRefunds,
+  canManageRefunds,
 }: {
   order: TOrder;
   canFulfillOrders: boolean;
   canManageWholeOrder: boolean;
+  canRequestRefunds: boolean;
+  canManageRefunds: boolean;
 }) {
   const {
     isPending,
@@ -252,6 +257,12 @@ export default function Show({
                             <ItemCell
                               item={item}
                               className="flex flex-col w-72 gap-4 text-balance"
+                            />
+                            <RefundActions
+                              orderUuid={order.uuid}
+                              item={item}
+                              canRequest={canRequestRefunds}
+                              canManage={canManageRefunds}
                             />
                           </AccordionContent>
                         </AccordionItem>

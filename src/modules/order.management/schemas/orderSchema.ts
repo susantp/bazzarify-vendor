@@ -19,6 +19,21 @@ const StoreScopedTotalsSchema = z
   })
   .strip();
 
+export const StoreOrderRefundSchema = z
+  .object({
+    uuid: z.uuid(),
+    requested_quantity: z.number().int().positive(),
+    amount_minor: z.number().int().nonnegative(),
+    status: z.enum(["requested", "approved", "declined", "returned"]),
+    reason: z.string(),
+    decision_note: z.string().nullable(),
+    created_at: z.iso.datetime().nullable(),
+    decision_at: z.iso.datetime().nullable(),
+    returned_at: z.iso.datetime().nullable(),
+    return_receipt_reference: z.string().nullable(),
+  })
+  .strict();
+
 export const ShippingInformationSchema = z
   .object({
     zip: z.string(),
@@ -43,6 +58,14 @@ export const OrderItemSchema = z
     qty_canceled: z.number().int().nonnegative().default(0),
     qty_shipped: z.number().int().nonnegative().default(0),
     qty_refunded: z.number().int().nonnegative().default(0),
+    refund_cases: z.array(StoreOrderRefundSchema).default([]),
+    refund_policy_enabled: z.boolean().optional(),
+    payment_allocation_uuid: z.uuid().nullable().optional(),
+    payment_allocation_status: z
+      .enum(["pending", "collected"])
+      .nullable()
+      .optional(),
+    payment_allocation_method: z.literal("cod").nullable().optional(),
 
     unit_price: z.float64().nonnegative(),
     row_discount: z.float64().nonnegative().default(0),
