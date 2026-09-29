@@ -10,8 +10,17 @@ const order: IRoute["order"] = {
   update: {
     path: "/order-management/orders/:orderId",
   },
-  itemFulfillment: {
-    path: "/order-management/orders/:orderId/items/:itemId/fulfillment",
+  deliveryEvent: {
+    path: "/order-management/orders/:orderId/delivery-units/:unitId/events",
+  },
+  deliveryQueue: {
+    path: "/order-management/delivery-units",
+  },
+  deliveryRuns: {
+    path: "/order-management/delivery-runs",
+  },
+  deliveryRunAssignment: {
+    path: "/order-management/delivery-runs/:runId/assignment",
   },
   itemRefunds: {
     path: "/order-management/orders/:orderId/allocations/:allocationId/items/:itemId/refunds",

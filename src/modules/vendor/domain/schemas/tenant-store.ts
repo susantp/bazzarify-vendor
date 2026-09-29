@@ -15,6 +15,7 @@ export const TenantStoreSummarySchema = z
     name: z.string(),
     slug: z.string(),
     store_type_uuid: z.uuid().nullable(),
+    delivery_mode: z.enum(["tenant_managed", "vendor_managed"]),
     assigned_vendor: AssignedVendorSchema.nullable(),
   })
   .strict();

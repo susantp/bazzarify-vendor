@@ -6,6 +6,7 @@ import {
   actionDecideStoreOrderRefund,
   actionRequestStoreOrderRefund,
 } from "@/modules/order.management/actions/actionManageStoreOrderRefund";
+import { createOrderIdempotencyKey } from "@/modules/order.management/domain/idempotency-key";
 import type { TOrder } from "@/modules/order.management/schemas/orderSchema";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
@@ -157,7 +158,7 @@ export default function RefundActions({
                           const idempotencyKey =
                             returnKeys.current[refundCase.uuid] ??
                             (returnKeys.current[refundCase.uuid] =
-                              crypto.randomUUID());
+                              createOrderIdempotencyKey());
                           return actionConfirmStoreOrderRefundReturned(
                             orderUuid,
                             refundCase.uuid,
@@ -218,7 +219,7 @@ export default function RefundActions({
                 () => {
                   const idempotencyKey =
                     requestKey.current ??
-                    (requestKey.current = crypto.randomUUID());
+                    (requestKey.current = createOrderIdempotencyKey());
                   return actionRequestStoreOrderRefund(
                     orderUuid,
                     allocationUuid,

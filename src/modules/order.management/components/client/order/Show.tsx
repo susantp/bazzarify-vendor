@@ -30,13 +30,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toTitleCase } from "@/modules/core/utils";
-import { actionUpdateOrderItemFulfillment } from "@/modules/order.management/actions/actionUpdateOrderItemFulfillment";
+import DeliveryUnitsPanel from "@/modules/order.management/components/client/order/DeliveryUnitsPanel";
 import RefundActions from "@/modules/order.management/components/client/order/RefundActions";
 import ItemCell from "@/modules/order.management/components/client/orderItem/ItemCell";
 import useOrderShow from "@/modules/order.management/hooks/order/useOrderShow";
 import { TOrder } from "@/modules/order.management/schemas/orderSchema";
-import { useRouter } from "next/navigation";
-import { useTransition } from "react";
 
 export default function Show({
   order,
@@ -57,8 +55,6 @@ export default function Show({
     statusOptions,
     handleOrderStatusChange,
   } = useOrderShow({ order, canManageWholeOrder });
-  const router = useRouter();
-  const [isItemActionPending, startItemAction] = useTransition();
   const scopedItemCount = order.items.length;
   const scopedQuantity = order.items.reduce(
     (total, item) => total + item.qty_ordered,
@@ -71,10 +67,6 @@ export default function Show({
     shipping_total: 0,
     grand_total: 0,
   };
-  const canOfferFulfillmentActions = canFulfillOrders && !canManageWholeOrder;
-
-  const itemRemainingQuantity = (item: TOrder["items"][number]) =>
-    Math.max(0, item.qty_ordered - item.qty_canceled - item.qty_shipped);
   return (
     <Card>
       <CardHeader>
@@ -85,6 +77,11 @@ export default function Show({
             : "Review the items in this order that belong to your store."}
         </CardDescription>
       </CardHeader>
+      <DeliveryUnitsPanel
+        canManage={canFulfillOrders && !canManageWholeOrder}
+        orderUuid={order.uuid}
+        units={order.delivery_units}
+      />
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-2">
         <Card>
           <CardHeader>
@@ -234,9 +231,6 @@ export default function Show({
                   <TableHead>Discount</TableHead>
                   <TableHead>Shipping fee</TableHead>
                   <TableHead>Total</TableHead>
-                  {canOfferFulfillmentActions ? (
-                    <TableHead>Item Actions</TableHead>
-                  ) : null}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -283,77 +277,13 @@ export default function Show({
                     <TableCell className="text-right">
                       {item.row_total}
                     </TableCell>
-                    {canOfferFulfillmentActions ? (
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="default"
-                            disabled={
-                              isItemActionPending ||
-                              itemRemainingQuantity(item) === 0
-                            }
-                            onClick={() => {
-                              startItemAction(async () => {
-                                const result =
-                                  await actionUpdateOrderItemFulfillment(
-                                    order.uuid,
-                                    item.uuid,
-                                    "ship_remaining",
-                                    `Store item marked shipped for ${item.name}.`,
-                                  );
-
-                                if (!("error" in result)) {
-                                  router.refresh();
-                                }
-                              });
-                            }}
-                          >
-                            Ship Remaining
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={
-                              isItemActionPending ||
-                              itemRemainingQuantity(item) === 0
-                            }
-                            onClick={() => {
-                              startItemAction(async () => {
-                                const result =
-                                  await actionUpdateOrderItemFulfillment(
-                                    order.uuid,
-                                    item.uuid,
-                                    "cancel_remaining",
-                                    `Store item canceled for ${item.name}.`,
-                                  );
-
-                                if (!("error" in result)) {
-                                  router.refresh();
-                                }
-                              });
-                            }}
-                          >
-                            Cancel Remaining
-                          </Button>
-                        </div>
-                      </TableCell>
-                    ) : null}
                   </TableRow>
                 ))}
               </TableBody>
               <TableFooter className="text-end bg-transparent">
                 <TableRow>
                   <TableCell className="text-left">Sub Total</TableCell>
-                  <TableCell
-                    colSpan={
-                      canManageWholeOrder
-                        ? 5
-                        : canOfferFulfillmentActions
-                          ? 6
-                          : 5
-                    }
-                  >
+                  <TableCell colSpan={5}>
                     {canManageWholeOrder
                       ? order.sub_total
                       : scopedTotals.sub_total}
@@ -361,15 +291,7 @@ export default function Show({
                 </TableRow>
                 <TableRow>
                   <TableCell className="text-left">Discount</TableCell>
-                  <TableCell
-                    colSpan={
-                      canManageWholeOrder
-                        ? 5
-                        : canOfferFulfillmentActions
-                          ? 6
-                          : 5
-                    }
-                  >
+                  <TableCell colSpan={5}>
                     {canManageWholeOrder
                       ? order.discount_total
                       : scopedTotals.discount_total}
@@ -377,15 +299,7 @@ export default function Show({
                 </TableRow>
                 <TableRow>
                   <TableCell className="text-left">Tax</TableCell>
-                  <TableCell
-                    colSpan={
-                      canManageWholeOrder
-                        ? 5
-                        : canOfferFulfillmentActions
-                          ? 6
-                          : 5
-                    }
-                  >
+                  <TableCell colSpan={5}>
                     {canManageWholeOrder
                       ? order.tax_total
                       : scopedTotals.tax_total}
@@ -410,13 +324,13 @@ export default function Show({
                   <>
                     <TableRow>
                       <TableCell className="text-left">Shipping</TableCell>
-                      <TableCell colSpan={canOfferFulfillmentActions ? 6 : 5}>
+                      <TableCell colSpan={5}>
                         {scopedTotals.shipping_total}
                       </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell className="text-left">Your Total</TableCell>
-                      <TableCell colSpan={canOfferFulfillmentActions ? 6 : 5}>
+                      <TableCell colSpan={5}>
                         {scopedTotals.grand_total}
                       </TableCell>
                     </TableRow>
