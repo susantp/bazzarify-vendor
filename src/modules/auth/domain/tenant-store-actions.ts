@@ -10,6 +10,7 @@ import {
 } from "@/modules/vendor/domain/schemas/tenant-store";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 
 const TENANT_STORES_PATH = "/workspace/stores";
 
@@ -89,4 +90,57 @@ export async function actionCreateTenantStore(
   }
 
   redirect(`${TENANT_STORES_PATH}?updated=created`);
+}
+
+export async function actionUpdateTenantStoreDeliveryPolicy(
+  formData: FormData,
+): Promise<void> {
+  const request = z
+    .object({
+      store_uuid: z.uuid(),
+      mode: z.enum(["tenant_managed", "vendor_managed"]),
+    })
+    .safeParse({
+      store_uuid: formData.get("store_uuid"),
+      mode: formData.get("mode"),
+    });
+  if (!request.success) redirect(`${TENANT_STORES_PATH}?error=delivery-policy`);
+
+  try {
+    const client = await authAxiosInstance();
+    const response = await client.put(
+      `tenants/current/stores/${request.data.store_uuid}/delivery-policy`,
+      { mode: request.data.mode },
+    );
+    const parsed = ApiResponseSchema(
+      z
+        .object({
+          delivery_policy: z
+            .object({
+              store_uuid: z.uuid(),
+              mode: z.enum(["tenant_managed", "vendor_managed"]),
+              updated_by_user_uuid: z.uuid(),
+            })
+            .strict(),
+        })
+        .strict(),
+    ).safeParse(response.data);
+
+    if (
+      !parsed.success ||
+      parsed.data.metaData.error ||
+      !parsed.data.data.payload
+    ) {
+      console.error("[delivery-policy] response contract failed", parsed);
+      redirect(`${TENANT_STORES_PATH}?error=delivery-policy`);
+    }
+    revalidatePath(TENANT_STORES_PATH);
+    revalidatePath("/workspace/delivery");
+  } catch (error) {
+    if (error && typeof error === "object" && "digest" in error) throw error;
+    console.error("[delivery-policy] update request failed", error);
+    redirect(`${TENANT_STORES_PATH}?error=delivery-policy`);
+  }
+
+  redirect(`${TENANT_STORES_PATH}?updated=delivery-policy`);
 }

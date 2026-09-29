@@ -1,4 +1,5 @@
 import {
+  DEFAULT_NEUTRAL_TENANT_CONTEXT_HOSTS,
   isNeutralTenantContextHost,
   resolveTenantWorkspaceForHost,
 } from "@/modules/auth/domain/tenant-host";
@@ -29,14 +30,46 @@ describe("resolveTenantWorkspaceForHost", () => {
       resolveTenantWorkspaceForHost([tenantA], "unknown.bazzarify.local"),
     ).toBeNull();
   });
+
+  it("does not treat app-role hosts as tenant domains", () => {
+    const tenantWithAppRoleHosts = {
+      ...tenantA,
+      domains: ["vendor.larashops.local", "admin.larashops.local"],
+    };
+
+    expect(
+      resolveTenantWorkspaceForHost(
+        [tenantWithAppRoleHosts],
+        "vendor.larashops.local",
+      ),
+    ).toBeNull();
+    expect(
+      resolveTenantWorkspaceForHost(
+        [tenantWithAppRoleHosts],
+        "admin.larashops.local",
+      ),
+    ).toBeNull();
+  });
 });
 
 describe("isNeutralTenantContextHost", () => {
-  const neutralHosts = ["vendor.bazzarify.local", "local-ne.larashops.local"];
+  const neutralHosts = DEFAULT_NEUTRAL_TENANT_CONTEXT_HOSTS;
 
   it("keeps explicit tenant selection on configured platform hosts", () => {
     expect(
       isNeutralTenantContextHost("Vendor.Bazzarify.Local.", neutralHosts),
+    ).toBe(true);
+  });
+
+  it("forwards the selected tenant on the documented local vendor host", () => {
+    expect(
+      isNeutralTenantContextHost("vendor.larashops.local", neutralHosts),
+    ).toBe(true);
+  });
+
+  it("keeps the local admin application host tenant-context-neutral", () => {
+    expect(
+      isNeutralTenantContextHost("admin.larashops.local", neutralHosts),
     ).toBe(true);
   });
 
