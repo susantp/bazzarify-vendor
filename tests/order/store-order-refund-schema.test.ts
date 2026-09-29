@@ -8,15 +8,26 @@ const refundCase = {
   status: "requested",
   reason: "Item arrived damaged",
   decision_note: null,
-  created_at: "2026-09-28T12:00:00.000Z",
-  decision_at: null,
-  returned_at: null,
+  created_at: "2026-09-29T00:09:15+00:00",
+  decision_at: "2026-09-29T00:10:15+00:00",
+  returned_at: "2026-09-29T00:11:15+00:00",
   return_receipt_reference: null,
 };
 
 describe("StoreOrderRefundSchema", () => {
   it("accepts the vendor/admin refund projection", () => {
     expect(StoreOrderRefundSchema.safeParse(refundCase).success).toBe(true);
+  });
+
+  it("accepts UTC timestamps with Z as well as explicit offsets", () => {
+    expect(
+      StoreOrderRefundSchema.safeParse({
+        ...refundCase,
+        created_at: "2026-09-29T00:09:15.000Z",
+        decision_at: null,
+        returned_at: null,
+      }).success,
+    ).toBe(true);
   });
 
   it("rejects unknown statuses, fractional amounts, and leaked fields", () => {

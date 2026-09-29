@@ -27,9 +27,9 @@ export const StoreOrderRefundSchema = z
     status: z.enum(["requested", "approved", "declined", "returned"]),
     reason: z.string(),
     decision_note: z.string().nullable(),
-    created_at: z.iso.datetime().nullable(),
-    decision_at: z.iso.datetime().nullable(),
-    returned_at: z.iso.datetime().nullable(),
+    created_at: z.iso.datetime({ offset: true }).nullable(),
+    decision_at: z.iso.datetime({ offset: true }).nullable(),
+    returned_at: z.iso.datetime({ offset: true }).nullable(),
     return_receipt_reference: z.string().nullable(),
   })
   .strict();
