@@ -7,6 +7,7 @@ import { handleUnknownError } from "@/modules/core/lib/utils.index";
 import { ORDER_MANAGEMENT_ROUTES } from "@/modules/order.management/routes";
 import { OrderListPayloadSchema } from "@/modules/order.management/schemas/responsePayloads/OrderListPayloadSchema";
 import { isAxiosError } from "axios";
+import { z } from "zod";
 
 const buildOrderSearchParams = (
   params?: FormData | TURLSearchParams,
@@ -46,19 +47,33 @@ export const actionGetOrders = async (params?: FormData | TURLSearchParams) => {
     );
 
     if (!parsed.success) {
-      throw new Error("Order list schema validation failed.");
+      throw new Error(`[order-list-schema] ${z.prettifyError(parsed.error)}`);
     }
 
     if (parsed.data.metaData.error || parsed.data.data.payload === null) {
-      return { error: parsed.data.metaData.error ?? "Unable to fetch orders." };
+      const responseError = parsed.data.metaData.error;
+      const errorMessage =
+        typeof responseError === "string"
+          ? responseError.trim() !== ""
+            ? responseError
+            : "Unable to fetch orders."
+          : responseError
+            ? JSON.stringify(responseError)
+            : "Unable to fetch orders.";
+      return {
+        error: errorMessage,
+      };
     }
 
     return parsed.data.data.payload;
   } catch (error) {
     if (isAxiosError(error)) {
-      console.log("error fetch orders: ", error?.response?.data);
+      console.error("[order-list-request] request failed", error.message);
     } else {
-      console.log("error fetch orders: ", error);
+      console.error(
+        "[order-list-request] response or request failed",
+        error instanceof Error ? error.message : "Unknown order error",
+      );
     }
     return handleUnknownError(error);
   }
