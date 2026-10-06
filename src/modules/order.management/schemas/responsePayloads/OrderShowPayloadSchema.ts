@@ -1,10 +1,8 @@
-import { OrderSchema } from "@/modules/order.management/schemas/orderSchema";
+import { OrderResponseSchema } from "@/modules/order.management/schemas/orderSchema";
 import { z } from "zod";
 
 export const OrderShowPayloadSchema = z
   .object({
-    order: OrderSchema.nullable(),
+    order: OrderResponseSchema.nullable(),
   })
-  .strip();
-
-export type TOrderShowPayloadSchema = z.infer<typeof OrderShowPayloadSchema>;
+  .strict();

@@ -16,17 +16,6 @@ import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 
 type OrderListItem = TOrderList[number];
-type OrderListBuyer = {
-  name?: string | null;
-  email?: string | null;
-};
-type OrderListCountFields = {
-  items_count?: number | null;
-  item_count?: number | null;
-  visible_items_count?: number | null;
-  visible_item_quantity?: number | null;
-  visible_grand_total?: number | null;
-};
 
 interface OrdersServerTableProps {
   rows: OrderListItem[];
@@ -54,6 +43,12 @@ export default function OrdersServerTable({
 }: OrdersServerTableProps) {
   const router = useRouter();
   const [isUpdatingStatus, startStatusUpdate] = useTransition();
+  const includesFullOrderRows = rows.some(
+    (record) => record.response_scope === "full_order",
+  );
+  const scopedRows = rows.some(
+    (record) => record.response_scope === "authorized_stores",
+  );
 
   const columns: TableColumn<OrderListItem>[] = [
     {
@@ -62,16 +57,11 @@ export default function OrdersServerTable({
     },
     {
       key: "items",
-      title: canManageWholeOrder ? "Items Ordered" : "Your Items",
+      title: includesFullOrderRows ? "Total items" : "Visible items",
       render: (_, record) => {
-        const counts = record as OrderListItem & OrderListCountFields;
-        if (!canManageWholeOrder) {
-          return (
-            counts.visible_items_count ?? counts.visible_item_quantity ?? 0
-          );
-        }
-
-        return counts.items_count ?? counts.item_count ?? 0;
+        return record.response_scope === "authorized_stores"
+          ? record.scoped_summary.item_count
+          : record.item_count;
       },
     },
     {
@@ -89,30 +79,27 @@ export default function OrdersServerTable({
       key: "status",
       title: "Status",
     },
-    {
-      key: "payment_method",
-      title: "Payment Method",
-    },
+    ...(includesFullOrderRows
+      ? [{ key: "payment_method", title: "Payment Method" }]
+      : []),
     {
       key: "grand_total",
-      title: canManageWholeOrder ? "Grand Total" : "Your Total",
+      title: includesFullOrderRows ? "Total" : "Visible total",
       align: "right",
-      render: (value, record) => {
-        const counts = record as OrderListItem & OrderListCountFields;
-        const resolvedValue = canManageWholeOrder
-          ? value
-          : (counts.visible_grand_total ?? 0);
+      render: (_, record) => {
+        const total =
+          record.response_scope === "authorized_stores"
+            ? record.scoped_summary.totals.grand_total
+            : record.grand_total;
 
-        return typeof resolvedValue === "number"
-          ? `$${resolvedValue.toFixed(2)}`
-          : "$0.00";
+        return total.toFixed(2);
       },
     },
     {
       key: "buyer.name",
       title: "Buyer",
       render: (_, record) => {
-        const buyer = (record as { buyer?: OrderListBuyer | null }).buyer;
+        const buyer = record.buyer;
         return buyer?.name ?? buyer?.email ?? "-";
       },
     },
@@ -123,52 +110,55 @@ export default function OrdersServerTable({
       key: "__status_actions",
       title: "Status Action",
       align: "right",
-      render: (_, record) => (
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={isUpdatingStatus || statusOptions.length === 0}
-            >
-              Update Status
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="flex w-56 flex-col gap-2">
-            {statusOptions.map((statusOption) => (
+      render: (_, record) =>
+        record.response_scope === "full_order" ? (
+          <Popover>
+            <PopoverTrigger asChild>
               <Button
-                key={statusOption.code}
+                size="sm"
                 variant="outline"
-                onClick={() => {
-                  startStatusUpdate(async () => {
-                    const result = await actionUpdateOrderStatus(
-                      record.uuid,
-                      statusOption.code,
-                      `Order marked as ${statusOption.label.toLowerCase()} by super admin.`,
-                    );
-
-                    if (!("error" in result)) {
-                      router.refresh();
-                    }
-                  });
-                }}
+                disabled={isUpdatingStatus || statusOptions.length === 0}
               >
-                {statusOption.label}
+                Update Status
               </Button>
-            ))}
-          </PopoverContent>
-        </Popover>
-      ),
+            </PopoverTrigger>
+            <PopoverContent className="flex w-56 flex-col gap-2">
+              {statusOptions.map((statusOption) => (
+                <Button
+                  key={statusOption.code}
+                  variant="outline"
+                  onClick={() => {
+                    startStatusUpdate(async () => {
+                      const result = await actionUpdateOrderStatus(
+                        record.uuid,
+                        statusOption.code,
+                        `Order marked as ${statusOption.label.toLowerCase()} by super admin.`,
+                      );
+
+                      if (!("error" in result)) {
+                        router.refresh();
+                      }
+                    });
+                  }}
+                >
+                  {statusOption.label}
+                </Button>
+              ))}
+            </PopoverContent>
+          </Popover>
+        ) : null,
     });
   }
 
   return (
     <ServerDataTable
-      title={canManageWholeOrder ? "Manage Orders" : "Store Orders"}
+      title={canManageWholeOrder ? "Manage Orders" : "Authorized Store Orders"}
       description={
         canManageWholeOrder
           ? "Manage orders with server-driven filters, pagination, and backend-owned query behavior."
-          : "Review only the order items that belong to your store. Whole-order status changes remain platform-admin controlled."
+          : scopedRows
+            ? "Review order items and totals from stores you are authorized to access. Whole-order status changes remain platform-admin controlled."
+            : "No store-scoped orders are available for the current filters."
       }
       columns={columns}
       rows={rows}
