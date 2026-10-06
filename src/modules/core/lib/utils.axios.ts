@@ -4,7 +4,10 @@ import {
   actionRemoveTokenFromCallback,
   getSessionToken,
 } from "@/modules/auth/data/lib/auth-lib";
-import { isNeutralTenantContextHost } from "@/modules/auth/domain/tenant-host";
+import {
+  DEFAULT_NEUTRAL_TENANT_CONTEXT_HOSTS,
+  isNeutralTenantContextHost,
+} from "@/modules/auth/domain/tenant-host";
 import { getRequestHostname } from "@/modules/core/lib/utils.requestHost";
 import {
   deleteSession,
@@ -44,7 +47,7 @@ export const authAxiosInstance = async () => {
   const requestHostname = getRequestHostname(await headers());
   const neutralTenantContextHosts = (
     process.env.TENANT_CONTEXT_NEUTRAL_HOSTS ??
-    "localhost,127.0.0.1,local-ne.larashops.local,vendor.bazarify.local,admin.bazarify.local,vendor.bazzarify.local,admin.bazzarify.local,vendor.bazarify.com.np,admin.bazarify.com.np"
+    DEFAULT_NEUTRAL_TENANT_CONTEXT_HOSTS.join(",")
   )
     .split(",")
     .map((host) => host.trim())

@@ -30,21 +30,24 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toTitleCase } from "@/modules/core/utils";
-import { actionUpdateOrderItemFulfillment } from "@/modules/order.management/actions/actionUpdateOrderItemFulfillment";
+import DeliveryUnitsPanel from "@/modules/order.management/components/client/order/DeliveryUnitsPanel";
+import RefundActions from "@/modules/order.management/components/client/order/RefundActions";
 import ItemCell from "@/modules/order.management/components/client/orderItem/ItemCell";
 import useOrderShow from "@/modules/order.management/hooks/order/useOrderShow";
 import { TOrder } from "@/modules/order.management/schemas/orderSchema";
-import { useRouter } from "next/navigation";
-import { useTransition } from "react";
 
 export default function Show({
   order,
   canFulfillOrders,
   canManageWholeOrder,
+  canRequestRefunds,
+  canManageRefunds,
 }: {
   order: TOrder;
   canFulfillOrders: boolean;
   canManageWholeOrder: boolean;
+  canRequestRefunds: boolean;
+  canManageRefunds: boolean;
 }) {
   const {
     isPending,
@@ -52,44 +55,56 @@ export default function Show({
     statusOptions,
     handleOrderStatusChange,
   } = useOrderShow({ order, canManageWholeOrder });
-  const router = useRouter();
-  const [isItemActionPending, startItemAction] = useTransition();
-  const scopedItemCount = order.items.length;
-  const scopedQuantity = order.items.reduce(
-    (total, item) => total + item.qty_ordered,
-    0,
+  const isFullOrder = order.response_scope === "full_order";
+  const allocationStoreNames = new Map(
+    order.items.map((item) => [
+      item.store_uuid,
+      item.store?.name ?? "Visible store",
+    ]),
   );
-  const scopedTotals = order.store_scoped_totals ?? {
-    sub_total: 0,
-    discount_total: 0,
-    tax_total: 0,
-    shipping_total: 0,
-    grand_total: 0,
-  };
-  const canOfferFulfillmentActions = canFulfillOrders && !canManageWholeOrder;
-
-  const itemRemainingQuantity = (item: TOrder["items"][number]) =>
-    Math.max(0, item.qty_ordered - item.qty_canceled - item.qty_shipped);
+  const orderSummary =
+    order.response_scope === "authorized_stores"
+      ? {
+          itemCount: order.scoped_summary.item_count,
+          itemQuantity: order.scoped_summary.item_quantity,
+          totals: order.scoped_summary.totals,
+        }
+      : {
+          itemCount: order.item_count,
+          itemQuantity: order.item_quantity,
+          totals: {
+            sub_total: order.sub_total,
+            discount_total: order.discount_total,
+            tax_total: order.tax_total,
+            shipping_total: order.shipping_total,
+            grand_total: order.grand_total,
+          },
+        };
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-2xl">Order Details</CardTitle>
         <CardDescription>
-          {canManageWholeOrder
+          {isFullOrder
             ? "Manage full order information and platform-level status."
-            : "Review the items in this order that belong to your store."}
+            : "Review items in this order for stores you are authorized to access."}
         </CardDescription>
       </CardHeader>
+      <DeliveryUnitsPanel
+        canManage={canFulfillOrders && !canManageWholeOrder}
+        orderUuid={order.uuid}
+        units={order.delivery_units}
+      />
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-2">
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Basic information</CardTitle>
             <CardDescription>
-              {canManageWholeOrder
+              {isFullOrder
                 ? "View full order details and manage order status."
-                : "View the platform order identifier and your scoped fulfillment slice."}
+                : "View the platform order identifier and your authorized-store fulfillment slice."}
             </CardDescription>
-            {canManageWholeOrder ? (
+            {canManageWholeOrder && isFullOrder ? (
               <CardAction>
                 <Popover>
                   <PopoverTrigger asChild>
@@ -124,20 +139,18 @@ export default function Show({
             <p>Order Number: {order.order_number}</p>
             <p>Status: {isPending ? "Updating status..." : optimisticStatus}</p>
             <p>
-              {canManageWholeOrder ? "Total Items" : "Your Store Items"}:{" "}
-              {canManageWholeOrder ? order.item_count : scopedItemCount}
+              {isFullOrder ? "Total Items" : "Visible Items"}:{" "}
+              {orderSummary.itemCount}
             </p>
             <p>
-              {canManageWholeOrder
-                ? "Total Ordered Quantity"
-                : "Your Store Quantity"}
-              : {canManageWholeOrder ? order.item_quantity : scopedQuantity}
+              {isFullOrder ? "Total Ordered Quantity" : "Visible Quantity"}:{" "}
+              {orderSummary.itemQuantity}
             </p>
             <p>Placed At: {order.placed_at}</p>
-            {!canManageWholeOrder ? (
+            {!isFullOrder ? (
               <p className="text-sm text-muted-foreground">
-                Whole-order status is platform-managed. You are only viewing the
-                items assigned to your store.
+                Whole-order status is platform-managed. This view contains only
+                items from stores you are authorized to access.
               </p>
             ) : null}
           </CardContent>
@@ -173,32 +186,30 @@ export default function Show({
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">
-              {canManageWholeOrder
-                ? "Payment information"
-                : "Your Store Totals"}
+              {isFullOrder ? "Payment information" : "Visible store totals"}
             </CardTitle>
             <CardDescription>
-              {canManageWholeOrder
+              {isFullOrder
                 ? "View payment details"
-                : "These totals are calculated from the items visible to your store."}
+                : "Totals and allocations cover only your authorized stores."}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p>
               Sub Total:{" "}
-              {canManageWholeOrder ? order.sub_total : scopedTotals.sub_total}
+              {isFullOrder ? order.sub_total : orderSummary.totals.sub_total}
             </p>
             <p>
               Discount:{" "}
-              {canManageWholeOrder
+              {isFullOrder
                 ? order.discount_total
-                : scopedTotals.discount_total}
+                : orderSummary.totals.discount_total}
             </p>
             <p>
               Tax:{" "}
-              {canManageWholeOrder ? order.tax_total : scopedTotals.tax_total}
+              {isFullOrder ? order.tax_total : orderSummary.totals.tax_total}
             </p>
-            {canManageWholeOrder ? (
+            {isFullOrder ? (
               <>
                 <p>Shipping: {order.shipping_total}</p>
                 <p>Method: {order.payment_method}</p>
@@ -208,16 +219,29 @@ export default function Show({
               </>
             ) : (
               <>
-                <p>Shipping: {scopedTotals.shipping_total}</p>
-                <p>Your Total: {scopedTotals.grand_total}</p>
+                <p>Shipping: {orderSummary.totals.shipping_total}</p>
+                <p>Visible Total: {orderSummary.totals.grand_total}</p>
               </>
             )}
+            {order.payment_allocations.map((allocation) => (
+              <p key={allocation.uuid}>
+                Collection for{" "}
+                {allocationStoreNames.get(allocation.store_uuid) ??
+                  "visible store"}
+                : {(allocation.amount_minor / 100).toFixed(2)} ·{" "}
+                {allocation.status}
+              </p>
+            ))}
           </CardContent>
         </Card>
         <Card className="grid md:col-span-2 grid-cols-1">
           <CardHeader>
             <CardTitle className="text-lg">Order Items</CardTitle>
-            <CardDescription>View order items.</CardDescription>
+            <CardDescription>
+              {isFullOrder
+                ? "View all order items by store."
+                : "View items from stores you are authorized to access."}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -229,9 +253,6 @@ export default function Show({
                   <TableHead>Discount</TableHead>
                   <TableHead>Shipping fee</TableHead>
                   <TableHead>Total</TableHead>
-                  {canOfferFulfillmentActions ? (
-                    <TableHead>Item Actions</TableHead>
-                  ) : null}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -253,6 +274,12 @@ export default function Show({
                               item={item}
                               className="flex flex-col w-72 gap-4 text-balance"
                             />
+                            <RefundActions
+                              orderUuid={order.uuid}
+                              item={item}
+                              canRequest={canRequestRefunds}
+                              canManage={canManageRefunds}
+                            />
                           </AccordionContent>
                         </AccordionItem>
                       </Accordion>
@@ -272,115 +299,35 @@ export default function Show({
                     <TableCell className="text-right">
                       {item.row_total}
                     </TableCell>
-                    {canOfferFulfillmentActions ? (
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="default"
-                            disabled={
-                              isItemActionPending ||
-                              itemRemainingQuantity(item) === 0
-                            }
-                            onClick={() => {
-                              startItemAction(async () => {
-                                const result =
-                                  await actionUpdateOrderItemFulfillment(
-                                    order.uuid,
-                                    item.uuid,
-                                    "ship_remaining",
-                                    `Store item marked shipped for ${item.name}.`,
-                                  );
-
-                                if (!("error" in result)) {
-                                  router.refresh();
-                                }
-                              });
-                            }}
-                          >
-                            Ship Remaining
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={
-                              isItemActionPending ||
-                              itemRemainingQuantity(item) === 0
-                            }
-                            onClick={() => {
-                              startItemAction(async () => {
-                                const result =
-                                  await actionUpdateOrderItemFulfillment(
-                                    order.uuid,
-                                    item.uuid,
-                                    "cancel_remaining",
-                                    `Store item canceled for ${item.name}.`,
-                                  );
-
-                                if (!("error" in result)) {
-                                  router.refresh();
-                                }
-                              });
-                            }}
-                          >
-                            Cancel Remaining
-                          </Button>
-                        </div>
-                      </TableCell>
-                    ) : null}
                   </TableRow>
                 ))}
               </TableBody>
               <TableFooter className="text-end bg-transparent">
                 <TableRow>
                   <TableCell className="text-left">Sub Total</TableCell>
-                  <TableCell
-                    colSpan={
-                      canManageWholeOrder
-                        ? 5
-                        : canOfferFulfillmentActions
-                          ? 6
-                          : 5
-                    }
-                  >
-                    {canManageWholeOrder
+                  <TableCell colSpan={5}>
+                    {isFullOrder
                       ? order.sub_total
-                      : scopedTotals.sub_total}
+                      : orderSummary.totals.sub_total}
                   </TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="text-left">Discount</TableCell>
-                  <TableCell
-                    colSpan={
-                      canManageWholeOrder
-                        ? 5
-                        : canOfferFulfillmentActions
-                          ? 6
-                          : 5
-                    }
-                  >
-                    {canManageWholeOrder
+                  <TableCell colSpan={5}>
+                    {isFullOrder
                       ? order.discount_total
-                      : scopedTotals.discount_total}
+                      : orderSummary.totals.discount_total}
                   </TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="text-left">Tax</TableCell>
-                  <TableCell
-                    colSpan={
-                      canManageWholeOrder
-                        ? 5
-                        : canOfferFulfillmentActions
-                          ? 6
-                          : 5
-                    }
-                  >
-                    {canManageWholeOrder
+                  <TableCell colSpan={5}>
+                    {isFullOrder
                       ? order.tax_total
-                      : scopedTotals.tax_total}
+                      : orderSummary.totals.tax_total}
                   </TableCell>
                 </TableRow>
-                {canManageWholeOrder ? (
+                {isFullOrder ? (
                   <>
                     <TableRow>
                       <TableCell className="text-left">Shipping</TableCell>
@@ -399,14 +346,14 @@ export default function Show({
                   <>
                     <TableRow>
                       <TableCell className="text-left">Shipping</TableCell>
-                      <TableCell colSpan={canOfferFulfillmentActions ? 6 : 5}>
-                        {scopedTotals.shipping_total}
+                      <TableCell colSpan={5}>
+                        {orderSummary.totals.shipping_total}
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="text-left">Your Total</TableCell>
-                      <TableCell colSpan={canOfferFulfillmentActions ? 6 : 5}>
-                        {scopedTotals.grand_total}
+                      <TableCell className="text-left">Visible Total</TableCell>
+                      <TableCell colSpan={5}>
+                        {orderSummary.totals.grand_total}
                       </TableCell>
                     </TableRow>
                   </>

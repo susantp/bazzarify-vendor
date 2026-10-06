@@ -17,7 +17,7 @@ export const actionUpdateOrderStatus = async (
       { status: updatedStatus, ...(note ? { note } : {}) },
     );
 
-    const responseData = response.data; //as ApiResponse<TOrderShowPayloadSchema>;
+    const responseData = response.data;
 
     if (responseData.metaData.error) {
       return { error: responseData.metaData.error };

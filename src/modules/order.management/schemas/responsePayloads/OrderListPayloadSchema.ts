@@ -8,6 +8,4 @@ export const OrderListPayloadSchema = z
     orders: SimplePaginatedSchema(OrderListItemSchema).nullable(),
     table: ServerDataTableMetaSchema,
   })
-  .strip();
-
-export type TOrderListPayloadSchema = z.infer<typeof OrderListPayloadSchema>;
+  .strict();

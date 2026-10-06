@@ -7,28 +7,215 @@ const StoreSummarySchema = z
     name: z.string(),
     slug: z.string().optional(),
   })
-  .strip();
+  .strict();
 
-const StoreScopedTotalsSchema = z
+const OrderBuyerSummarySchema = z
   .object({
-    sub_total: z.float64().nonnegative().default(0),
-    discount_total: z.float64().nonnegative().default(0),
-    tax_total: z.float64().nonnegative().default(0),
-    shipping_total: z.float64().nonnegative().default(0),
-    grand_total: z.float64().nonnegative().default(0),
+    name: z.string().nullable(),
+    email: z.string().email().nullable(),
+    phone: z.string().nullable().optional(),
   })
-  .strip();
+  .strict();
 
 export const ShippingInformationSchema = z
   .object({
-    zip: z.string(),
-    city: z.string(),
-    name: z.string(),
-    phone: z.string(),
-    address: z.string(),
-    country: z.string(),
+    recipient_name: z.string().nullable().optional(),
+    name: z.string().nullable().optional(),
+    phone: z.string().nullable().optional(),
+    address_line: z.string().nullable().optional(),
+    address: z.string().nullable().optional(),
+    street: z.string().nullable().optional(),
+    locality: z.string().nullable().optional(),
+    city: z.string().nullable().optional(),
+    region: z.string().nullable().optional(),
+    state: z.string().nullable().optional(),
+    country: z.string().nullable().optional(),
+    postal_code: z.string().nullable().optional(),
+    zip: z.string().nullable().optional(),
+    latitude: z.number().nullable().optional(),
+    longitude: z.number().nullable().optional(),
+    place_id: z.string().nullable().optional(),
+    label: z.string().nullable().optional(),
+    note: z.string().nullable().optional(),
   })
   .strict();
+
+const StoreScopedTotalsSchema = z
+  .object({
+    sub_total: z.number().nonnegative(),
+    discount_total: z.number().nonnegative(),
+    tax_total: z.number().nonnegative(),
+    shipping_total: z.number().nonnegative(),
+    grand_total: z.number().nonnegative(),
+  })
+  .strict();
+
+export const StoreOrderRefundSchema = z
+  .object({
+    uuid: z.uuid(),
+    requested_quantity: z.number().int().positive(),
+    amount_minor: z.number().int().nonnegative(),
+    status: z.enum(["requested", "approved", "declined", "returned"]),
+    reason: z.string(),
+    decision_note: z.string().nullable(),
+    created_at: z.iso.datetime({ offset: true }).nullable(),
+    decision_at: z.iso.datetime({ offset: true }).nullable(),
+    returned_at: z.iso.datetime({ offset: true }).nullable(),
+    return_receipt_reference: z.string().nullable(),
+  })
+  .strict();
+
+export const OrderDeliveryUnitSchema = z
+  .object({
+    uuid: z.uuid(),
+    store_uuid: z.uuid(),
+    store_name: z.string().nullable(),
+    mode: z.enum(["tenant_managed", "vendor_managed"]),
+    status: z.enum([
+      "preparing",
+      "ready_for_handoff",
+      "handed_off",
+      "in_transit",
+      "partially_delivered",
+      "delivered",
+      "failed",
+      "canceled",
+    ]),
+    tracking_reference: z.string().nullable(),
+    items: z.array(
+      z
+        .object({
+          order_item_uuid: z.uuid(),
+          name: z.string().nullable(),
+          quantity: z.number().int().nonnegative(),
+          prepared: z.number().int().nonnegative(),
+          handed_off: z.number().int().nonnegative(),
+          delivered: z.number().int().nonnegative(),
+          canceled: z.number().int().nonnegative(),
+        })
+        .strict(),
+    ),
+    events: z.array(
+      z
+        .object({
+          uuid: z.uuid(),
+          type: z.enum([
+            "prepared",
+            "handed_off",
+            "picked_up",
+            "in_transit",
+            "delivered",
+            "failed_attempt",
+            "canceled",
+            "assigned",
+          ]),
+          occurred_at: z.iso.datetime({ offset: true }).nullable(),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+
+const StoreOrderAllocationSchema = z
+  .object({
+    uuid: z.uuid(),
+    store_uuid: z.uuid(),
+    method: z.string().max(32),
+    amount_minor: z.number().int().nonnegative(),
+    status: z.enum(["pending", "collected"]),
+  })
+  .strict();
+
+const VariantAttributesSchema = z
+  .object({
+    uuid: z.uuid().nullable().optional(),
+    name: z.string().nullable().optional(),
+    sku: z.string().nullable().optional(),
+    color: z.string().nullable().optional(),
+    size: z.string().nullable().optional(),
+  })
+  .strict();
+
+const OrderDetailItemSchema = z
+  .object({
+    uuid: z.uuid(),
+    order_uuid: z.uuid(),
+    orderable_uuid: z.uuid(),
+    sku: z.string(),
+    name: z.string(),
+    variant_attributes: VariantAttributesSchema.nullable(),
+    store_uuid: z.uuid(),
+    store: StoreSummarySchema.nullable(),
+    qty_ordered: z.number().int().nonnegative(),
+    qty_refunded: z.number().int().nonnegative(),
+    unit_price: z.number().nonnegative(),
+    row_discount: z.number().nonnegative(),
+    row_tax: z.number().nonnegative(),
+    row_shipping: z.number().nonnegative(),
+    row_total: z.number().nonnegative(),
+    refund_cases: z.array(StoreOrderRefundSchema),
+    refund_policy_enabled: z.boolean(),
+    payment_allocation_uuid: z.uuid().nullable(),
+    payment_allocation_status: z.enum(["pending", "collected"]).nullable(),
+    payment_allocation_method: z.string().max(32).nullable(),
+  })
+  .strict();
+
+const ScopedOrderSummarySchema = z
+  .object({
+    item_count: z.number().int().nonnegative(),
+    item_quantity: z.number().int().nonnegative(),
+    totals: StoreScopedTotalsSchema,
+  })
+  .strict();
+
+const ScopedOrderDetailSchema = z
+  .object({
+    uuid: z.uuid(),
+    response_scope: z.literal("authorized_stores"),
+    order_number: z.string(),
+    placed_at: z.iso.datetime({ offset: true }),
+    status: z.string().max(32),
+    buyer: OrderBuyerSummarySchema.nullable(),
+    shipping_information: ShippingInformationSchema.nullable(),
+    scoped_summary: ScopedOrderSummarySchema,
+    items: z.array(OrderDetailItemSchema),
+    payment_allocations: z.array(StoreOrderAllocationSchema),
+    delivery_units: z.array(OrderDeliveryUnitSchema),
+  })
+  .strict();
+
+const FullOrderDetailSchema = z
+  .object({
+    uuid: z.uuid(),
+    response_scope: z.literal("full_order"),
+    order_number: z.string(),
+    placed_at: z.iso.datetime({ offset: true }),
+    status: z.string().max(32),
+    buyer: OrderBuyerSummarySchema.nullable(),
+    shipping_information: ShippingInformationSchema.nullable(),
+    item_count: z.number().int().nonnegative(),
+    item_quantity: z.number().int().nonnegative(),
+    sub_total: z.number().nonnegative(),
+    discount_total: z.number().nonnegative(),
+    tax_total: z.number().nonnegative(),
+    shipping_total: z.number().nonnegative(),
+    grand_total: z.number().nonnegative(),
+    payment_status: z.string().max(32).nullable(),
+    payment_method: z.string().max(32).nullable(),
+    payment_fee: z.number().nonnegative(),
+    items: z.array(OrderDetailItemSchema),
+    payment_allocations: z.array(StoreOrderAllocationSchema),
+    delivery_units: z.array(OrderDeliveryUnitSchema),
+  })
+  .strict();
+
+export const OrderResponseSchema = z.discriminatedUnion("response_scope", [
+  ScopedOrderDetailSchema,
+  FullOrderDetailSchema,
+]);
+export type TOrder = z.infer<typeof OrderResponseSchema>;
+export type TOrderItem = z.infer<typeof OrderDetailItemSchema>;
 export const OrderItemSchema = z
   .object({
     line_id: z.string().optional(),
@@ -40,9 +227,15 @@ export const OrderItemSchema = z
     name: z.string(),
     variant_attributes: z.string().nullable(),
     qty_ordered: z.number().int().nonnegative(),
-    qty_canceled: z.number().int().nonnegative().default(0),
-    qty_shipped: z.number().int().nonnegative().default(0),
     qty_refunded: z.number().int().nonnegative().default(0),
+    refund_cases: z.array(StoreOrderRefundSchema).default([]),
+    refund_policy_enabled: z.boolean().optional(),
+    payment_allocation_uuid: z.uuid().nullable().optional(),
+    payment_allocation_status: z
+      .enum(["pending", "collected"])
+      .nullable()
+      .optional(),
+    payment_allocation_method: z.literal("cod").nullable().optional(),
 
     unit_price: z.float64().nonnegative(),
     row_discount: z.float64().nonnegative().default(0),
@@ -51,7 +244,6 @@ export const OrderItemSchema = z
     row_total: z.float64().nonnegative().nonoptional(),
     created_by_user_uuid: z.uuid().nullable().optional(),
     store_uuid: z.uuid().nullable().optional(),
-    vendor: UserSchema.nullable(),
     store: StoreSummarySchema.nullable().optional(),
     meta: z.record(z.any(), z.string()).nullable(), // JSON column
     created_at: z.iso.datetime().optional(),
@@ -96,6 +288,7 @@ export const OrderSchema = z
   })
   .extend({
     items: z.array(OrderItemSchema),
+    delivery_units: z.array(OrderDeliveryUnitSchema),
   })
   .strict();
 export const CartItem = OrderItemSchema.pick({
@@ -144,34 +337,38 @@ export const OrderTotalsSchema = OrderSchema.pick({
   grand_total: true,
   payment_fee: true,
 }).strict();
-export const OrderListItemSchema = OrderSchema.pick({
-  uuid: true,
-  order_number: true,
-  placed_at: true,
-  status: true,
-  grand_total: true,
-  buyer_uuid: true,
-  buyer_type: true,
-}).extend({
-  shipping_total: z.number().nonnegative().optional(),
-  payment_method: z.string().max(32).optional(),
-  item_count: z.number().int().nonnegative().optional(),
-  item_quantity: z.number().int().nonnegative().optional(),
-  items_count: z.number().int().nonnegative().nullable().optional(),
-  visible_items_count: z.number().int().nonnegative().nullable().optional(),
-  visible_item_quantity: z.number().int().nonnegative().nullable().optional(),
-  visible_grand_total: z.number().nonnegative().nullable().optional(),
-  buyer: z
-    .object({
-      name: z.string().nullable().optional(),
-      email: z.string().email().nullable().optional(),
-    })
-    .nullable()
-    .optional(),
-});
+const FullOrderListItemSchema = z
+  .object({
+    response_scope: z.literal("full_order"),
+    uuid: z.uuid(),
+    order_number: z.string(),
+    placed_at: z.iso.datetime({ offset: true }),
+    status: z.string().max(32),
+    item_count: z.number().int().nonnegative(),
+    item_quantity: z.number().int().nonnegative(),
+    grand_total: z.number().nonnegative(),
+    payment_method: z.string().max(32).nullable(),
+    buyer: OrderBuyerSummarySchema.pick({ name: true, email: true }).nullable(),
+  })
+  .strict();
+
+const ScopedOrderListItemSchema = z
+  .object({
+    response_scope: z.literal("authorized_stores"),
+    uuid: z.uuid(),
+    order_number: z.string(),
+    placed_at: z.iso.datetime({ offset: true }),
+    status: z.string().max(32),
+    scoped_summary: ScopedOrderSummarySchema,
+    buyer: OrderBuyerSummarySchema.pick({ name: true, email: true }).nullable(),
+  })
+  .strict();
+
+export const OrderListItemSchema = z.discriminatedUnion("response_scope", [
+  ScopedOrderListItemSchema,
+  FullOrderListItemSchema,
+]);
 export const OrderListSchema = z.array(OrderListItemSchema);
-export type TOrder = z.infer<typeof OrderSchema>;
-export type TOrderItem = z.infer<typeof OrderItemSchema>;
 export type TCart = z.infer<typeof Cart>;
 export type TCartMeta = z.infer<typeof CartMeta>;
 export type TCartItem = z.infer<typeof CartItem>;

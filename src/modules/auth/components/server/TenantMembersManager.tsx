@@ -4,6 +4,7 @@ import {
   actionDeactivateTenantMember,
   actionInviteTenantMember,
   actionUpdateTenantMember,
+  actionUpdateTenantMemberDeliveryPermission,
 } from "@/modules/auth/domain/tenant-membership-actions";
 
 const TENANT_ROLES = [
@@ -19,10 +20,12 @@ function RoleAndStoresFields({
   stores,
   role,
   selectedStoreUuids = [],
+  allowVendorAssignment = false,
 }: {
   stores: StoreOption[];
   role?: string;
   selectedStoreUuids?: string[];
+  allowVendorAssignment?: boolean;
 }) {
   return (
     <div className="grid gap-3">
@@ -44,6 +47,28 @@ function RoleAndStoresFields({
           ))}
         </select>
       </label>
+      {allowVendorAssignment ? (
+        <label className="grid gap-1 text-sm">
+          Assign vendor store
+          <select
+            className="h-9 rounded-md border bg-background px-2"
+            defaultValue={selectedStoreUuids[0] ?? ""}
+            name="vendor_store_uuid"
+          >
+            <option value="">No store assigned</option>
+            {stores.map((store) => (
+              <option key={store.uuid} value={store.uuid}>
+                {store.name}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-muted-foreground">
+            A vendor operates one store in this workspace. Invitations must be
+            accepted before assignment. Reassignment replaces the current vendor
+            and is recorded in the assignment history.
+          </span>
+        </label>
+      ) : null}
       <fieldset className="grid gap-2">
         <legend className="text-sm font-medium">Operator store access</legend>
         <p className="text-xs text-muted-foreground">
@@ -156,6 +181,40 @@ export default function TenantMembersManager({
               </div>
               {membership.status === "active" ? (
                 <div className="grid gap-4 border-t pt-4 md:grid-cols-[minmax(0,1fr)_auto]">
+                  {currentRole === "operator" ? (
+                    <form
+                      action={actionUpdateTenantMemberDeliveryPermission}
+                      className="flex flex-wrap items-center gap-3 rounded-md border p-3 md:col-span-2"
+                    >
+                      <input
+                        name="membership_uuid"
+                        type="hidden"
+                        value={membership.uuid}
+                      />
+                      <input
+                        name="enabled"
+                        type="hidden"
+                        value={
+                          membership.delivery_execution_enabled
+                            ? "false"
+                            : "true"
+                        }
+                      />
+                      <p className="min-w-0 flex-1 text-sm">
+                        Delivery execution is{" "}
+                        {membership.delivery_execution_enabled
+                          ? "enabled"
+                          : "disabled"}
+                        . Operators also need store assignments for every unit
+                        in a shared run.
+                      </p>
+                      <Button size="sm" type="submit" variant="outline">
+                        {membership.delivery_execution_enabled
+                          ? "Revoke delivery access"
+                          : "Enable delivery access"}
+                      </Button>
+                    </form>
+                  ) : null}
                   <form
                     action={actionUpdateTenantMember}
                     className="grid gap-4"
@@ -166,6 +225,7 @@ export default function TenantMembersManager({
                       value={membership.uuid}
                     />
                     <RoleAndStoresFields
+                      allowVendorAssignment
                       role={currentRole}
                       selectedStoreUuids={membership.store_uuids}
                       stores={stores}

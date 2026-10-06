@@ -15,6 +15,7 @@ export const TenantMembershipSchema = z
       .strict(),
     roles: z.array(z.string()),
     store_uuids: z.array(z.uuid()),
+    delivery_execution_enabled: z.boolean(),
   })
   .strict();
 

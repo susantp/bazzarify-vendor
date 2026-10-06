@@ -3,6 +3,7 @@ import { z } from "zod";
 export const VENDOR_ONBOARDING_STATES = [
   "identity_verification_pending",
   "store_setup_pending",
+  "awaiting_store_assignment",
   "remediation_required",
   "ready",
 ] as const;
@@ -10,6 +11,7 @@ export const VENDOR_ONBOARDING_STATES = [
 export const VENDOR_ONBOARDING_ACTIONS = [
   "verify_identity",
   "create_store",
+  "await_store_assignment",
   "restore_category_authority",
   "none",
 ] as const;

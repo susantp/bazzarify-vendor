@@ -12,7 +12,7 @@ export const StoreOnboardingSchema = z
 export const StoreSchema = z
   .object({
     uuid: z.uuid(),
-    user_uuid: z.uuid(),
+    assigned_vendor_user_uuid: z.uuid().nullable(),
     store_type_uuid: z.uuid().nullable().optional(),
     name: z.string(),
     slug: z.string(),
@@ -28,14 +28,14 @@ export const StoreSchema = z
     deleted_at: z.string().optional().nullable(),
     category_count: z.number().int().nonnegative().optional(),
     product_authoring_ready: z.boolean().optional(),
-    onboarding: StoreOnboardingSchema.optional(),
+    onboarding: StoreOnboardingSchema.nullable().optional(),
   })
   .strip();
 
 export const SessionStoreSchema = StoreSchema.pick({
   name: true,
   slug: true,
-  user_uuid: true,
+  assigned_vendor_user_uuid: true,
   store_type_uuid: true,
   email: true,
   phone: true,
@@ -50,7 +50,7 @@ export const SessionStoreSchema = StoreSchema.pick({
 
 export function isStoreProductAuthoringReady(store: {
   product_authoring_ready?: boolean;
-  onboarding?: { product_authoring_ready: boolean };
+  onboarding?: { product_authoring_ready: boolean } | null;
 }): boolean {
   return (
     store.product_authoring_ready ??

@@ -29,14 +29,21 @@ function redirectActionError(): never {
 
 function getFormRoleAndStoreUuids(formData: FormData) {
   const role = String(formData.get("role") ?? "");
+  const vendorStoreUuid = formData.get("vendor_store_uuid");
+  const storeUuids =
+    role === "operator"
+      ? formData
+          .getAll("store_uuids")
+          .filter((value): value is string => typeof value === "string")
+      : role === "vendor" &&
+          typeof vendorStoreUuid === "string" &&
+          vendorStoreUuid.length > 0
+        ? [vendorStoreUuid]
+        : [];
+
   return {
     role,
-    store_uuids:
-      role === "operator"
-        ? formData
-            .getAll("store_uuids")
-            .filter((value): value is string => typeof value === "string")
-        : [],
+    store_uuids: storeUuids,
   };
 }
 
@@ -151,4 +158,53 @@ export async function actionDeactivateTenantMember(
   }
 
   redirect(`${TENANT_MEMBERS_PATH}?updated=deactivated`);
+}
+
+export async function actionUpdateTenantMemberDeliveryPermission(
+  formData: FormData,
+): Promise<void> {
+  const request = z
+    .object({
+      membership_uuid: z.uuid(),
+      enabled: z.enum(["true", "false"]).transform((value) => value === "true"),
+    })
+    .safeParse({
+      membership_uuid: formData.get("membership_uuid"),
+      enabled: formData.get("enabled"),
+    });
+  if (!request.success)
+    redirect(`${TENANT_MEMBERS_PATH}?error=delivery-permission`);
+
+  try {
+    const client = await authAxiosInstance();
+    const response = await client.put(
+      `tenants/current/members/${request.data.membership_uuid}/delivery-permission`,
+      { enabled: request.data.enabled },
+    );
+    const parsed = ApiResponseSchema(
+      z
+        .object({
+          membership_uuid: z.uuid(),
+          permission: z.literal("delivery.execute"),
+          enabled: z.boolean(),
+        })
+        .strict(),
+    ).safeParse(response.data);
+    if (
+      !parsed.success ||
+      parsed.data.metaData.error ||
+      !parsed.data.data.payload
+    ) {
+      console.error("[delivery-permission] response contract failed", parsed);
+      redirect(`${TENANT_MEMBERS_PATH}?error=delivery-permission`);
+    }
+    revalidatePath(TENANT_MEMBERS_PATH);
+    revalidatePath("/workspace/delivery");
+  } catch (error) {
+    if (error && typeof error === "object" && "digest" in error) throw error;
+    console.error("[delivery-permission] update request failed", error);
+    redirect(`${TENANT_MEMBERS_PATH}?error=delivery-permission`);
+  }
+
+  redirect(`${TENANT_MEMBERS_PATH}?updated=delivery-permission`);
 }
