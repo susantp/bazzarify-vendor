@@ -1,5 +1,6 @@
 "use server";
 
+import { ProductDeliveryPermissionsMutationPayloadSchema } from "@/modules/auth/domain/schemas/TenantDeliveryPolicySchema";
 import {
   TenantMembershipListPayloadSchema,
   TenantMembershipMutationPayloadSchema,
@@ -207,4 +208,64 @@ export async function actionUpdateTenantMemberDeliveryPermission(
   }
 
   redirect(`${TENANT_MEMBERS_PATH}?updated=delivery-permission`);
+}
+
+export async function actionUpdateTenantMemberProductDeliveryPermissions(
+  formData: FormData,
+): Promise<void> {
+  const request = z
+    .object({
+      membership_uuid: z.uuid(),
+      product_configuration_enabled: z
+        .enum(["true", "false"])
+        .transform((value) => value === "true"),
+      fee_configuration_enabled: z
+        .enum(["true", "false"])
+        .transform((value) => value === "true"),
+    })
+    .safeParse({
+      membership_uuid: formData.get("membership_uuid"),
+      product_configuration_enabled: formData.get(
+        "product_configuration_enabled",
+      ),
+      fee_configuration_enabled: formData.get("fee_configuration_enabled"),
+    });
+  if (!request.success)
+    redirect(`${TENANT_MEMBERS_PATH}?error=product-delivery-permissions`);
+
+  try {
+    const client = await authAxiosInstance();
+    const response = await client.put(
+      `tenants/current/members/${request.data.membership_uuid}/product-delivery-permissions`,
+      {
+        product_configuration_enabled:
+          request.data.product_configuration_enabled,
+        fee_configuration_enabled: request.data.fee_configuration_enabled,
+      },
+    );
+    const parsed = ApiResponseSchema(
+      ProductDeliveryPermissionsMutationPayloadSchema,
+    ).safeParse(response.data);
+    if (
+      !parsed.success ||
+      parsed.data.metaData.error ||
+      !parsed.data.data.payload
+    ) {
+      console.error(
+        "[product-delivery-permissions] response contract failed",
+        parsed,
+      );
+      redirect(`${TENANT_MEMBERS_PATH}?error=product-delivery-permissions`);
+    }
+    revalidatePath(TENANT_MEMBERS_PATH);
+  } catch (error) {
+    if (error && typeof error === "object" && "digest" in error) throw error;
+    console.error(
+      "[product-delivery-permissions] update request failed",
+      error,
+    );
+    redirect(`${TENANT_MEMBERS_PATH}?error=product-delivery-permissions`);
+  }
+
+  redirect(`${TENANT_MEMBERS_PATH}?updated=product-delivery-permissions`);
 }

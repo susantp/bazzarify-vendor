@@ -1,5 +1,6 @@
 "use server";
 
+import { StoreDeliveryPolicyMutationPayloadSchema } from "@/modules/auth/domain/schemas/TenantDeliveryPolicySchema";
 import ApiResponseSchema from "@/modules/core/domain/schemas/ApiResponse";
 import { authAxiosInstance } from "@/modules/core/lib/utils.axios";
 import {
@@ -113,17 +114,7 @@ export async function actionUpdateTenantStoreDeliveryPolicy(
       { mode: request.data.mode },
     );
     const parsed = ApiResponseSchema(
-      z
-        .object({
-          delivery_policy: z
-            .object({
-              store_uuid: z.uuid(),
-              mode: z.enum(["tenant_managed", "vendor_managed"]),
-              updated_by_user_uuid: z.uuid(),
-            })
-            .strict(),
-        })
-        .strict(),
+      StoreDeliveryPolicyMutationPayloadSchema,
     ).safeParse(response.data);
 
     if (

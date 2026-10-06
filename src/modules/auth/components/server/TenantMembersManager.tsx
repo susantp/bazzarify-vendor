@@ -5,6 +5,7 @@ import {
   actionInviteTenantMember,
   actionUpdateTenantMember,
   actionUpdateTenantMemberDeliveryPermission,
+  actionUpdateTenantMemberProductDeliveryPermissions,
 } from "@/modules/auth/domain/tenant-membership-actions";
 
 const TENANT_ROLES = [
@@ -213,6 +214,57 @@ export default function TenantMembersManager({
                           ? "Revoke delivery access"
                           : "Enable delivery access"}
                       </Button>
+                    </form>
+                  ) : null}
+                  {currentRole === "vendor" &&
+                  membership.store_uuids.length === 1 ? (
+                    <form
+                      action={
+                        actionUpdateTenantMemberProductDeliveryPermissions
+                      }
+                      className="grid gap-3 rounded-md border p-3 md:col-span-2"
+                    >
+                      <input
+                        name="membership_uuid"
+                        type="hidden"
+                        value={membership.uuid}
+                      />
+                      <p className="text-sm font-medium">
+                        Product delivery permissions
+                      </p>
+                      <label className="flex items-center justify-between gap-3 text-sm">
+                        <span>
+                          Configure product delivery preparation and eligibility
+                        </span>
+                        <select
+                          className="h-9 rounded-md border bg-background px-2"
+                          defaultValue={String(
+                            membership.product_delivery_configuration_enabled,
+                          )}
+                          name="product_configuration_enabled"
+                        >
+                          <option value="false">Disabled</option>
+                          <option value="true">Enabled</option>
+                        </select>
+                      </label>
+                      <label className="flex items-center justify-between gap-3 text-sm">
+                        <span>Configure product delivery fees</span>
+                        <select
+                          className="h-9 rounded-md border bg-background px-2"
+                          defaultValue={String(
+                            membership.product_delivery_fee_configuration_enabled,
+                          )}
+                          name="fee_configuration_enabled"
+                        >
+                          <option value="false">Disabled</option>
+                          <option value="true">Enabled</option>
+                        </select>
+                      </label>
+                      <div>
+                        <Button size="sm" type="submit" variant="outline">
+                          Save product delivery access
+                        </Button>
+                      </div>
                     </form>
                   ) : null}
                   <form
