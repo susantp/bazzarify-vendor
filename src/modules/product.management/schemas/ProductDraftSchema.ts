@@ -37,6 +37,35 @@ const ProductDraftWorkflowSchema = z.object({
   }),
 });
 
+const ProductDeliveryFieldSchema = z.object({
+  label: z.string().min(1),
+  renderer: z.enum(["integer-input", "boolean-select"]),
+  value: z.union([z.number(), z.boolean(), z.null()]),
+  effective_value: z.union([z.number(), z.boolean(), z.null()]),
+  source: z.enum(["product", "store", "tenant", "default"]),
+  editable: z.boolean(),
+  min: z.number().int().nullable(),
+  max: z.number().int().nullable(),
+});
+
+const ProductDeliveryAuthoringSchema = z.object({
+  status: z.enum(["configured", "requires_configuration"]),
+  fields: z.object({
+    preparation_min_working_days: ProductDeliveryFieldSchema.extend({
+      renderer: z.literal("integer-input"),
+    }),
+    preparation_max_working_days: ProductDeliveryFieldSchema.extend({
+      renderer: z.literal("integer-input"),
+    }),
+    delivery_eligible: ProductDeliveryFieldSchema.extend({
+      renderer: z.literal("boolean-select"),
+    }),
+    surcharge_per_unit_minor: ProductDeliveryFieldSchema.extend({
+      renderer: z.literal("integer-input"),
+    }),
+  }),
+});
+
 const ProductDraftMediaSchema = z.object({
   uuid: z.uuid(),
   step_key: z.string().min(1),
@@ -70,6 +99,7 @@ export const ProductDraftSchema = z.object({
   target_product_uuid: z.uuid().nullable(),
   last_saved_at: z.string().nullable(),
   workflow: ProductDraftWorkflowSchema,
+  delivery_authoring: ProductDeliveryAuthoringSchema.nullable(),
   reviews: z
     .array(
       z.object({

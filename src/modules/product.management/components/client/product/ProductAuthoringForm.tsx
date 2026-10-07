@@ -38,6 +38,7 @@ export type ProductAuthoringStep =
   | "setup"
   | "category_details"
   | "options"
+  | "delivery"
   | "media"
   | "review";
 

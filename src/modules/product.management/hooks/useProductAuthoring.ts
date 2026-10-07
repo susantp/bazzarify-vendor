@@ -337,6 +337,97 @@ export default function useProductAuthoring({
     clearSubmissionFieldError("category");
   };
 
+  const restoreDraft: ProductAuthoringController["restoreDraft"] = async ({
+    setup,
+    categoryDetails,
+    options,
+    categoryPath,
+  }) => {
+    product.setProductForm((current) => ({
+      ...current,
+      name: typeof setup.name === "string" ? setup.name : current.name,
+      sku: typeof setup.sku === "string" ? setup.sku : current.sku,
+      type: typeof setup.type === "string" ? setup.type : current.type,
+      base_price:
+        typeof setup.base_price === "string"
+          ? setup.base_price
+          : current.base_price,
+      minimum_order_quantity:
+        typeof setup.minimum_order_quantity === "string"
+          ? setup.minimum_order_quantity
+          : current.minimum_order_quantity,
+      description:
+        typeof setup.description === "string"
+          ? setup.description
+          : current.description,
+      highlights:
+        typeof setup.highlights === "string"
+          ? setup.highlights
+          : current.highlights,
+      box_items:
+        typeof setup.box_items === "string"
+          ? setup.box_items
+          : current.box_items,
+      category:
+        typeof setup.category_uuid === "string"
+          ? setup.category_uuid
+          : current.category,
+    }));
+
+    const selectedCategory = categoryPath.at(-1);
+    if (selectedCategory) {
+      const categoryContext = await loadProductCategoryContext(
+        selectedCategory.slug,
+      );
+      if (!("error" in categoryContext)) {
+        category.setSelectedCategories(categoryPath);
+        category.setCommittedCategories(categoryPath);
+        category.setCommittedCategory(selectedCategory);
+        category.setCategorySpecifications(
+          categoryContext.specifications ?? [],
+        );
+        setCategoryAttributes(categoryContext.attributes ?? []);
+        setAuthoringProfile(categoryContext.authoringProfile);
+        setAuthoringSchema(categoryContext.authoringSchema);
+      }
+    }
+
+    const specifications = categoryDetails.specifications;
+    if (
+      typeof specifications === "object" &&
+      specifications !== null &&
+      !Array.isArray(specifications)
+    ) {
+      setSpecificationValues(specifications as Record<string, string>);
+    }
+    const selections = options.variant_selections;
+    if (
+      typeof selections === "object" &&
+      selections !== null &&
+      !Array.isArray(selections)
+    ) {
+      setVariantSelections(selections as Record<string, string[]>);
+    }
+    const variants = options.variants;
+    if (
+      typeof variants === "object" &&
+      variants !== null &&
+      !Array.isArray(variants)
+    ) {
+      variant.setVariantData(variants as TVariantDataMap);
+    }
+    const columns = options.columns;
+    if (
+      Array.isArray(columns) &&
+      columns.every((value) => typeof value === "string")
+    ) {
+      variant.setColumns(columns);
+    }
+    if (typeof options.has_customer_selectable_options === "boolean") {
+      setHasCustomerSelectableOptions(options.has_customer_selectable_options);
+    }
+  };
+
   const handleRemoveExistingProductImage = async (
     url: string,
   ): Promise<boolean> => {
@@ -711,6 +802,7 @@ export default function useProductAuthoring({
       isSubmitting,
       handleSubmit,
     },
+    restoreDraft,
   };
 }
 
