@@ -7,7 +7,9 @@ import type {
   TProductDraft,
 } from "@/modules/product.management";
 import { getProductAuthoringNavigation } from "@/modules/product.management/authoring/ProductAuthoringNavigation";
+import ProductAuthoringReviewStep from "@/modules/product.management/authoring/ProductAuthoringReviewStep";
 import ProductAuthoringShell from "@/modules/product.management/authoring/ProductAuthoringShell";
+import ProductDeliveryStep from "@/modules/product.management/authoring/ProductDeliveryStep";
 import {
   ProductAuthoringStep,
   ProductAuthoringStepContent,
@@ -54,6 +56,21 @@ const findCategoryName = (
   return null;
 };
 
+const findCategoryPath = (
+  categories: TCategory[],
+  uuid: string | null,
+  path: TCategory[] = [],
+): TCategory[] | null => {
+  if (!uuid) return null;
+  for (const category of categories) {
+    const nextPath = [...path, category];
+    if (category.uuid === uuid) return nextPath;
+    const nested = findCategoryPath(category.children ?? [], uuid, nextPath);
+    if (nested) return nested;
+  }
+  return null;
+};
+
 export default function ProductAuthoringDraftForm({
   categoryIndexPayload,
   controller,
@@ -66,7 +83,11 @@ export default function ProductAuthoringDraftForm({
   const [selectedStep, setSelectedStep] = useState<ProductAuthoringStep | null>(
     null,
   );
+  const [deliveryPayload, setDeliveryPayload] = useState<
+    Record<string, unknown>
+  >({});
   const resumeAttempted = useRef(false);
+  const restoredDraftUuid = useRef<string | null>(null);
   const { draft, removeMedia, resumeDraft, uploadMedia } = draftController;
   const activeStep =
     selectedStep ??
@@ -81,6 +102,28 @@ export default function ProductAuthoringDraftForm({
     resumeAttempted.current = true;
     void resumeDraft(draftMode, targetProductUuid);
   }, [draftMode, resumeDraft, targetProductUuid]);
+
+  useEffect(() => {
+    if (!draft || restoredDraftUuid.current === draft.uuid) return;
+    restoredDraftUuid.current = draft.uuid;
+    setDeliveryPayload(getStepPayload(draft, "delivery") ?? {});
+    const setup = getStepPayload(draft, "setup") ?? {};
+    const categoryUuid = getString(setup.category_uuid) || draft.category_uuid;
+    void controller
+      .restoreDraft({
+        setup,
+        categoryDetails: getStepPayload(draft, "category_details") ?? {},
+        options: getStepPayload(draft, "options") ?? {},
+        categoryPath:
+          findCategoryPath(
+            categoryIndexPayload.categories.data,
+            categoryUuid,
+          ) ?? [],
+      })
+      .catch((error: unknown) => {
+        console.error("[product-draft] resume hydration failed", error);
+      });
+  }, [categoryIndexPayload.categories.data, controller, draft]);
 
   const setupPayload = (): Record<string, unknown> => ({
     ...controller.basicState.productForm,
@@ -114,7 +157,12 @@ export default function ProductAuthoringDraftForm({
             ],
           ),
         ),
+        variant_selections: controller.selectorState.variantSelections,
+        columns: controller.variantState.columns,
       };
+    }
+    if (stepKey === "delivery") {
+      return deliveryPayload;
     }
     return {};
   };
@@ -153,6 +201,14 @@ export default function ProductAuthoringDraftForm({
     async (mediaUuid: string) => Boolean(await removeMedia(mediaUuid)),
     [removeMedia],
   );
+  const handleContinue = async () => {
+    if (activeStep === "review" && draft) {
+      const submitted = await draftController.submitForReview();
+      if (submitted) setSelectedStep("review");
+      return;
+    }
+    await handleSave(true);
+  };
 
   if (!draft) {
     return (
@@ -205,7 +261,7 @@ export default function ProductAuthoringDraftForm({
       }}
       onEditSetup={() => setSelectedStep("setup")}
       onSave={() => void handleSave(false)}
-      onContinue={() => void handleSave(true)}
+      onContinue={() => void handleContinue()}
       onSelectStep={(stepKey) => {
         const step = draft.workflow.steps.find(
           (candidate) => candidate.key === stepKey,
@@ -215,23 +271,47 @@ export default function ProductAuthoringDraftForm({
         }
       }}
       canContinue={
-        currentStep?.key !== "review" && currentStep?.status !== "locked"
+        currentStep?.status !== "locked" &&
+        ["in_progress", "ready_for_review", "changes_requested"].includes(
+          draft.status,
+        )
+      }
+      continueLabel={
+        activeStep === "review"
+          ? draft.status === "submitted_for_review" ||
+            draft.status === "in_review"
+            ? "Submitted for review"
+            : "Submit for review"
+          : undefined
       }
       isPending={draftController.isPending}
       savedLabel={draftController.savedLabel}
       setupSummary={setupSummary}
       navigation={navigation}
     >
-      <ProductAuthoringStepContent
-        categoryIndexPayload={categoryIndexPayload}
-        controller={controller}
-        mode={mode}
-        activeStep={activeStep}
-        showSubmit={false}
-        draftMedia={draft.media}
-        onUploadDraftMedia={uploadDraftMedia}
-        onRemoveDraftMedia={removeDraftMedia}
-      />
+      {activeStep === "delivery" ? (
+        <ProductDeliveryStep
+          authoring={draft.delivery_authoring}
+          payload={deliveryPayload}
+          validationErrors={currentStep?.validation_errors ?? null}
+          onChange={(field, value) =>
+            setDeliveryPayload((current) => ({ ...current, [field]: value }))
+          }
+        />
+      ) : activeStep === "review" ? (
+        <ProductAuthoringReviewStep draft={draft} />
+      ) : (
+        <ProductAuthoringStepContent
+          categoryIndexPayload={categoryIndexPayload}
+          controller={controller}
+          mode={mode}
+          activeStep={activeStep}
+          showSubmit={false}
+          draftMedia={draft.media}
+          onUploadDraftMedia={uploadDraftMedia}
+          onRemoveDraftMedia={removeDraftMedia}
+        />
+      )}
     </ProductAuthoringShell>
   );
 }
@@ -267,7 +347,7 @@ function ProductAuthoringShellFallback({
         target_product_uuid: null,
         last_saved_at: null,
         workflow: {
-          version: "product-authoring-workflow.v1",
+          version: "product-authoring-workflow.v2",
           current_step: "setup",
           steps: [
             {
@@ -281,25 +361,30 @@ function ProductAuthoringShellFallback({
               completed_at: null,
               lock_reason: null,
             },
-            ...["category_details", "options", "media", "review"].map(
-              (key, index) => ({
-                key,
-                label: key,
-                position: index + 2,
-                status: "locked" as const,
-                payload: null,
-                validation_errors: null,
-                saved_at: null,
-                completed_at: null,
-                lock_reason: "Save the setup first.",
-              }),
-            ),
+            ...[
+              { key: "category_details", label: "Category details" },
+              { key: "options", label: "Options and inventory" },
+              { key: "delivery", label: "Delivery settings" },
+              { key: "media", label: "Images and media" },
+              { key: "review", label: "Review" },
+            ].map(({ key, label }, index) => ({
+              key,
+              label,
+              position: index + 2,
+              status: "locked" as const,
+              payload: null,
+              validation_errors: null,
+              saved_at: null,
+              completed_at: null,
+              lock_reason: "Save the setup first.",
+            })),
           ],
-          progress: { total_steps: 5, completed_steps: 0, remaining_steps: 5 },
+          progress: { total_steps: 6, completed_steps: 0, remaining_steps: 6 },
           actions: { save: true, review: false, commit: false, abandon: true },
         },
         reviews: [],
         media: [],
+        delivery_authoring: null,
       }}
       onBack={onBack}
       onEditSetup={() => undefined}

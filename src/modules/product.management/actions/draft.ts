@@ -215,6 +215,22 @@ export const actionReviewProductDraft = async (
   }
 };
 
+export const actionSubmitProductDraftForReview = async (
+  uuid: string,
+  expectedVersion: number,
+): Promise<ProductDraftResult> => {
+  try {
+    const client = await authAxiosInstance();
+    const response = await client.post(
+      PRODUCT_MANAGEMENT_ROUTES.productDraft.review.path.replace(":uuid", uuid),
+      { expected_version: expectedVersion },
+    );
+    return parseDraft(response.data as ApiResponse<TProductDraft>);
+  } catch (error) {
+    return handleUnknownError(error);
+  }
+};
+
 export const actionAbandonProductDraft = async (
   uuid: string,
 ): Promise<IMetaData> => {

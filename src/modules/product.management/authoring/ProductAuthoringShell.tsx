@@ -19,6 +19,7 @@ interface ProductAuthoringShellProps {
   onSelectStep?: (stepKey: string) => void;
   currentStep?: string;
   canContinue: boolean;
+  continueLabel?: string;
   isPending: boolean;
   savedLabel?: string;
   setupSummary?: Array<{ label: string; value: string }>;
@@ -35,6 +36,7 @@ export default function ProductAuthoringShell({
   onSelectStep,
   currentStep: selectedStep,
   canContinue,
+  continueLabel,
   isPending,
   savedLabel,
   setupSummary = [],
@@ -111,6 +113,7 @@ export default function ProductAuthoringShell({
             savedLabel={savedLabel}
             canGoBack={Boolean(onBack)}
             canContinue={canContinue}
+            continueLabel={continueLabel}
             onBack={onBack}
             onSave={onSave}
             onContinue={onContinue}

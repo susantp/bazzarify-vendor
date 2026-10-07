@@ -11,6 +11,7 @@ interface ProductAuthoringFooterProps {
   savedLabel?: string;
   canGoBack: boolean;
   canContinue: boolean;
+  continueLabel?: string;
   onBack: () => void;
   onSave: () => void;
   onContinue: () => void;
@@ -25,6 +26,7 @@ export default function ProductAuthoringFooter({
   savedLabel,
   canGoBack,
   canContinue,
+  continueLabel = "Save and continue",
   onBack,
   onSave,
   onContinue,
@@ -61,7 +63,7 @@ export default function ProductAuthoringFooter({
             disabled={!canContinue || isPending}
             onClick={onContinue}
           >
-            {isPending ? "Saving..." : "Save and continue"}
+            {isPending ? "Saving..." : continueLabel}
           </ThemedButton>
         </div>
       </div>

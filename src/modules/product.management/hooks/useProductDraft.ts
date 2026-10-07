@@ -6,6 +6,7 @@ import {
   actionListProductDrafts,
   actionSaveProductDraftStep,
   actionStartProductDraft,
+  actionSubmitProductDraftForReview,
   actionUploadProductDraftMedia,
 } from "@/modules/product.management/actions/draft";
 import { useCallback, useState } from "react";
@@ -215,6 +216,28 @@ export default function useProductDraft(uuid?: string) {
     [draft],
   );
 
+  const submitForReview = useCallback(async () => {
+    if (!draft) {
+      return null;
+    }
+
+    setIsPending(true);
+    setFeedback(null);
+    const result = await actionSubmitProductDraftForReview(
+      draft.uuid,
+      draft.version,
+    );
+    setIsPending(false);
+    if (isDraft(result)) {
+      setDraft(result);
+      setSavedLabel("Submitted for review");
+      return result;
+    }
+
+    setFeedback(toFeedback(result));
+    return null;
+  }, [draft]);
+
   const abandon = useCallback(async () => {
     if (!draft) {
       return false;
@@ -247,6 +270,7 @@ export default function useProductDraft(uuid?: string) {
     resumeDraft,
     savedLabel,
     saveStep,
+    submitForReview,
     startDraft,
     uploadMedia,
   };

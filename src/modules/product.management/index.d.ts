@@ -516,6 +516,12 @@ export interface ProductAuthoringController {
   variantState: VariantState;
   optionModeState: ProductOptionModeState;
   submissionState: ProductAuthoringSubmissionState;
+  restoreDraft: (input: {
+    setup: Record<string, unknown>;
+    categoryDetails: Record<string, unknown>;
+    options: Record<string, unknown>;
+    categoryPath: TCategory[];
+  }) => Promise<void>;
 }
 
 export interface IProductCard {

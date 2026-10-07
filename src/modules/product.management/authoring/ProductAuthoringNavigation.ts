@@ -60,6 +60,13 @@ export const getProductAuthoringNavigation = (
     field("variants", "Variants", "options"),
   ];
 
+  const deliveryFields = [
+    field("preparation_min_working_days", "Minimum preparation"),
+    field("preparation_max_working_days", "Maximum preparation"),
+    field("delivery_eligible", "Delivery eligibility"),
+    field("surcharge_per_unit_minor", "Per-item surcharge"),
+  ];
+
   return [
     { stepKey: "setup", fields: setupFields },
     {
@@ -70,6 +77,7 @@ export const getProductAuthoringNavigation = (
       stepKey: "options",
       fields: supportsField("variants") ? optionFields : [],
     },
+    { stepKey: "delivery", fields: deliveryFields },
     {
       stepKey: "media",
       fields: supportsField("images")
