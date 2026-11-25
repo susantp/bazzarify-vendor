@@ -1,4 +1,9 @@
 import { Button } from "@/components/ui/button";
+import DeliveryConfigurationForm from "@/modules/auth/components/client/DeliveryConfigurationForm";
+import type {
+  StoreDeliveryPolicyPayloadSchema,
+  TenantDeliveryPolicyPayloadSchema,
+} from "@/modules/auth/domain/schemas/TenantDeliveryPolicySchema";
 import {
   actionCreateTenantStore,
   actionUpdateTenantStoreDeliveryPolicy,
@@ -7,17 +12,27 @@ import type {
   TAvailableStoreType,
   TTenantStoreSummary,
 } from "@/modules/vendor/domain/schemas/tenant-store";
+import Link from "next/link";
+import type { z } from "zod";
 
 export default function TenantStoresManager({
   stores,
   storeTypes,
   updated,
   error,
+  tenantDelivery,
+  selectedStoreUuid,
+  storeDelivery,
 }: {
   stores: TTenantStoreSummary[];
   storeTypes: TAvailableStoreType[];
   updated?: string;
   error?: string;
+  tenantDelivery:
+    | z.infer<typeof TenantDeliveryPolicyPayloadSchema>["delivery_policy"]
+    | null;
+  selectedStoreUuid?: string;
+  storeDelivery: z.infer<typeof StoreDeliveryPolicyPayloadSchema> | null;
 }) {
   return (
     <div className="grid gap-8">
@@ -40,6 +55,20 @@ export default function TenantStoresManager({
           type, then try again.
         </p>
       ) : null}
+
+      <section className="grid gap-4 rounded-lg border bg-card p-5">
+        <h2 className="text-lg font-semibold">Tenant delivery defaults</h2>
+        {tenantDelivery ? (
+          <DeliveryConfigurationForm
+            storeUuid={null}
+            configuration={tenantDelivery.configuration}
+            active={tenantDelivery.active}
+            version={tenantDelivery.version}
+          />
+        ) : (
+          <p role="alert">Delivery defaults could not be loaded.</p>
+        )}
+      </section>
 
       <section className="rounded-lg border bg-card p-5">
         <h2 className="text-lg font-semibold">Create a tenant store</h2>
@@ -146,6 +175,41 @@ export default function TenantStoresManager({
                   Save delivery policy
                 </Button>
               </form>
+              {selectedStoreUuid === store.uuid ? (
+                <section className="my-4 grid gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h4 className="font-medium">Delivery overrides</h4>
+                    <Link
+                      className="text-sm underline"
+                      href="/workspace/stores"
+                    >
+                      Close overrides
+                    </Link>
+                  </div>
+                  {storeDelivery ? (
+                    <DeliveryConfigurationForm
+                      key={store.uuid}
+                      storeUuid={store.uuid}
+                      configuration={
+                        storeDelivery.delivery_policy?.configuration ?? null
+                      }
+                      effective={storeDelivery.effective.configuration}
+                      version={storeDelivery.delivery_policy?.version ?? 0}
+                    />
+                  ) : (
+                    <p role="alert">
+                      Store delivery overrides could not be loaded.
+                    </p>
+                  )}
+                </section>
+              ) : (
+                <Link
+                  className="my-2 w-fit text-sm underline"
+                  href={`/workspace/stores?deliveryStore=${store.uuid}`}
+                >
+                  Configure delivery overrides
+                </Link>
+              )}
               <p className="text-sm text-muted-foreground">
                 {store.assigned_vendor?.name ?? "No vendor assigned"}
               </p>
