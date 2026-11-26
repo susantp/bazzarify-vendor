@@ -43,6 +43,32 @@ const StoreDeliveryPolicyProjectionSchema = z
   })
   .strict();
 
+export type DeliveryConfiguration = z.infer<
+  typeof StoreDeliveryConfigurationSchema
+>;
+
+export const TenantDeliveryPolicyPayloadSchema = z.strictObject({
+  delivery_policy: StoreDeliveryPolicyProjectionSchema.extend({
+    version: z.number().int().nonnegative(),
+    active: z.boolean(),
+    configuration: StoreDeliveryConfigurationSchema.extend({
+      active: z.boolean().nullable(),
+    }),
+  }),
+});
+
+export const StoreDeliveryPolicyPayloadSchema = z.strictObject({
+  store_uuid: z.uuid(),
+  mode: z.enum(["tenant_managed", "vendor_managed"]),
+  delivery_policy: StoreDeliveryPolicyProjectionSchema.nullable(),
+  effective: z.strictObject({
+    status: z.enum(["configured", "requires_configuration"]),
+    tenant_version: z.number().int().positive().nullable(),
+    store_version: z.number().int().positive().nullable(),
+    configuration: StoreDeliveryConfigurationSchema,
+  }),
+});
+
 export const StoreDeliveryPolicyMutationPayloadSchema = z
   .object({
     delivery_policy: z
