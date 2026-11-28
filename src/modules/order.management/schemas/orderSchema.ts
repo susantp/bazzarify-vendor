@@ -1,5 +1,6 @@
 import { UserSchema } from "@/modules/auth/domain/schemas/UserSchema";
 import { z } from "zod";
+import { DeliveryPromiseSchema } from "./deliverySchema";
 
 const StoreSummarySchema = z
   .object({
@@ -82,6 +83,7 @@ export const OrderDeliveryUnitSchema = z
       "canceled",
     ]),
     tracking_reference: z.string().nullable(),
+    delivery_promise: DeliveryPromiseSchema.nullable(),
     items: z.array(
       z
         .object({

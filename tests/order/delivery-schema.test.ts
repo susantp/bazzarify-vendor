@@ -11,6 +11,7 @@ const deliveryUnit = {
   assigned_user_uuid: null,
   delivery_run_uuid: null,
   tracking_reference: null,
+  delivery_promise: null,
   items: [
     {
       order_item_uuid: "123e4567-e89b-42d3-a456-426614174003",
