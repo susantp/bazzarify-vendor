@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+export const DeliveryPromiseSchema = z
+  .object({
+    estimate_from: z.iso.date(),
+    estimate_to: z.iso.date(),
+    timezone: z.string().min(1),
+  })
+  .strict();
+
+export type TDeliveryPromise = z.infer<typeof DeliveryPromiseSchema>;
+
 export const DeliveryUnitSummarySchema = z
   .object({
     uuid: z.uuid(),
@@ -20,6 +30,7 @@ export const DeliveryUnitSummarySchema = z
     assigned_user_uuid: z.uuid().nullable(),
     delivery_run_uuid: z.uuid().nullable(),
     tracking_reference: z.string().nullable(),
+    delivery_promise: DeliveryPromiseSchema.nullable(),
     items: z.array(
       z
         .object({

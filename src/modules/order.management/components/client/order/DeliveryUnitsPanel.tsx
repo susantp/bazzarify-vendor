@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { actionRecordDeliveryEvent } from "@/modules/order.management/actions/actionRecordDeliveryEvent";
+import DeliveryPromiseLabel from "@/modules/order.management/components/client/delivery/DeliveryPromiseLabel";
 import { createOrderIdempotencyKey } from "@/modules/order.management/domain/idempotency-key";
 import type { TOrder } from "@/modules/order.management/schemas/orderSchema";
 import { useRouter } from "next/navigation";
@@ -162,6 +163,7 @@ export default function DeliveryUnitsPanel({
               </p>
             </div>
           </div>
+          <DeliveryPromiseLabel promise={unit.delivery_promise} />
           {unit.items.map((item) =>
             canManage && unit.mode === "vendor_managed" ? (
               <DeliveryItemActions

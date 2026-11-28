@@ -287,6 +287,7 @@ describe("order response scope contracts", () => {
             mode: "tenant_managed",
             status: "preparing",
             tracking_reference: null,
+            delivery_promise: null,
             items: [
               {
                 order_item_uuid: sharedItem.uuid,
@@ -312,6 +313,7 @@ describe("order response scope contracts", () => {
             mode: "tenant_managed",
             status: "preparing",
             tracking_reference: null,
+            delivery_promise: null,
             items: [],
             events: [
               {

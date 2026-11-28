@@ -7,6 +7,7 @@ import {
   actionCreateDeliveryRun,
   actionReassignDeliveryRun,
 } from "@/modules/order.management/actions/actionDeliveryOperations";
+import DeliveryPromiseLabel from "@/modules/order.management/components/client/delivery/DeliveryPromiseLabel";
 import { createOrderIdempotencyKey } from "@/modules/order.management/domain/idempotency-key";
 import type { TDeliveryUnitSummary } from "@/modules/order.management/schemas/deliverySchema";
 import Link from "next/link";
@@ -161,6 +162,7 @@ export default function DeliveryQueueManager({
                     {unit.store_name || "Store"} ·{" "}
                     {unit.status.replaceAll("_", " ")}
                   </span>
+                  <DeliveryPromiseLabel promise={unit.delivery_promise} />
                   <span className="break-all text-muted-foreground">
                     Order{" "}
                     <Link
