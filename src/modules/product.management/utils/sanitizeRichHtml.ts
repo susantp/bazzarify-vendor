@@ -169,7 +169,7 @@ const extractTextFromSerializedState = (value: unknown): string => {
   return lines.filter((line) => line.length > 0).join("\n");
 };
 
-const escapeHtmlFragment = (value: string): string =>
+export const escapeHtmlFragment = (value: string): string =>
   value
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
