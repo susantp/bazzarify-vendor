@@ -1,5 +1,6 @@
 "use client";
 
+import { ThemedButton } from "@/modules/core/components/server/ThemedButton";
 import type {
   ProductAuthoringController,
   TCategory,
@@ -86,13 +87,30 @@ export default function ProductAuthoringDraftForm({
   const [deliveryPayload, setDeliveryPayload] = useState<
     Record<string, unknown>
   >({});
+  const [isCheckingSavedDraft, setIsCheckingSavedDraft] = useState(true);
   const resumeAttempted = useRef(false);
   const restoredDraftUuid = useRef<string | null>(null);
-  const { draft, removeMedia, resumeDraft, uploadMedia } = draftController;
+  const {
+    draft,
+    feedback,
+    removeMedia,
+    resumeDraft,
+    resumeFeedback,
+    uploadMedia,
+  } = draftController;
   const activeStep =
     selectedStep ??
     (draft?.current_step as ProductAuthoringStep | undefined) ??
     "setup";
+
+  const checkForSavedDraft = useCallback(async () => {
+    setIsCheckingSavedDraft(true);
+    try {
+      await resumeDraft(draftMode, targetProductUuid);
+    } finally {
+      setIsCheckingSavedDraft(false);
+    }
+  }, [draftMode, resumeDraft, targetProductUuid]);
 
   useEffect(() => {
     if (resumeAttempted.current) {
@@ -100,8 +118,8 @@ export default function ProductAuthoringDraftForm({
     }
 
     resumeAttempted.current = true;
-    void resumeDraft(draftMode, targetProductUuid);
-  }, [draftMode, resumeDraft, targetProductUuid]);
+    void checkForSavedDraft();
+  }, [checkForSavedDraft]);
 
   useEffect(() => {
     if (!draft || restoredDraftUuid.current === draft.uuid) return;
@@ -210,12 +228,58 @@ export default function ProductAuthoringDraftForm({
     await handleSave(true);
   };
 
+  if (!draft && isCheckingSavedDraft) {
+    return (
+      <div
+        className="mx-auto w-full max-w-3xl px-4 py-10 text-sm text-muted-foreground sm:px-6"
+        role="status"
+      >
+        Checking for a saved draft…
+      </div>
+    );
+  }
+
+  if (!draft && resumeFeedback) {
+    return (
+      <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">
+        <section
+          className="rounded-lg border border-destructive/40 bg-destructive/5 p-6"
+          role="alert"
+        >
+          <h1 className="text-lg font-semibold">Unable to load saved draft</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            We couldn&apos;t check for a saved draft. Try again before starting
+            a new product.
+          </p>
+          <div className="mt-5 flex gap-3">
+            <ThemedButton
+              type="button"
+              disabled={isCheckingSavedDraft}
+              onClick={() => void checkForSavedDraft()}
+            >
+              {isCheckingSavedDraft ? "Loading..." : "Retry"}
+            </ThemedButton>
+            <ThemedButton
+              type="button"
+              variant="outline"
+              disabled={isCheckingSavedDraft}
+              onClick={() => router.push("/products")}
+            >
+              Back to products
+            </ThemedButton>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   if (!draft) {
     return (
       <ProductAuthoringShellFallback
         categoryIndexPayload={categoryIndexPayload}
         controller={controller}
         mode={mode}
+        feedback={feedback}
         isPending={draftController.isPending}
         savedLabel={draftController.savedLabel}
         onSave={() => void handleSave(false)}
@@ -289,6 +353,14 @@ export default function ProductAuthoringDraftForm({
       setupSummary={setupSummary}
       navigation={navigation}
     >
+      {feedback && (
+        <p
+          className="mb-4 rounded-md border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+          role="alert"
+        >
+          {feedback.error}
+        </p>
+      )}
       {activeStep === "delivery" ? (
         <ProductDeliveryStep
           authoring={draft.delivery_authoring}
@@ -320,12 +392,14 @@ function ProductAuthoringShellFallback({
   categoryIndexPayload,
   controller,
   mode,
+  feedback,
   isPending,
   savedLabel,
   onSave,
   onContinue,
   onBack,
 }: ProductAuthoringDraftFormProps & {
+  feedback: { error: string } | null;
   isPending: boolean;
   savedLabel?: string;
   onSave: () => void;
@@ -395,13 +469,23 @@ function ProductAuthoringShellFallback({
       savedLabel={savedLabel}
       navigation={navigation}
     >
-      <ProductAuthoringStepContent
-        categoryIndexPayload={categoryIndexPayload}
-        controller={controller}
-        mode={mode}
-        activeStep="setup"
-        showSubmit={false}
-      />
+      <>
+        {feedback && (
+          <p
+            className="mb-4 rounded-md border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+            role="alert"
+          >
+            {feedback.error}
+          </p>
+        )}
+        <ProductAuthoringStepContent
+          categoryIndexPayload={categoryIndexPayload}
+          controller={controller}
+          mode={mode}
+          activeStep="setup"
+          showSubmit={false}
+        />
+      </>
     </ProductAuthoringShell>
   );
 }

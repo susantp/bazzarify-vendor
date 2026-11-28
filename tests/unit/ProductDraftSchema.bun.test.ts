@@ -90,3 +90,21 @@ test("rejects unsupported delivery authoring renderer keys", () => {
     ).success,
   ).toBe(false);
 });
+
+test("accepts empty step maps only as JSON objects", () => {
+  const emptyStepMapDraft = ProductDraftSchema.parse(draft(null));
+  emptyStepMapDraft.workflow.steps[3].payload = {};
+
+  expect(ProductDraftSchema.safeParse(emptyStepMapDraft).success).toBe(true);
+
+  const arrayStepMapDraft = {
+    ...emptyStepMapDraft,
+    workflow: {
+      ...emptyStepMapDraft.workflow,
+      steps: emptyStepMapDraft.workflow.steps.map((step, index) =>
+        index === 3 ? { ...step, payload: [] } : step,
+      ),
+    },
+  };
+  expect(ProductDraftSchema.safeParse(arrayStepMapDraft).success).toBe(false);
+});

@@ -45,6 +45,9 @@ const isMediaUpload = (
 export default function useProductDraft(uuid?: string) {
   const [draft, setDraft] = useState<TProductDraft | null>(null);
   const [feedback, setFeedback] = useState<DraftFeedback | null>(null);
+  const [resumeFeedback, setResumeFeedback] = useState<DraftFeedback | null>(
+    null,
+  );
   const [isPending, setIsPending] = useState(false);
   const [savedLabel, setSavedLabel] = useState<string>();
 
@@ -67,31 +70,43 @@ export default function useProductDraft(uuid?: string) {
     async (mode: "create" | "edit", targetProductUuid?: string) => {
       setIsPending(true);
       setFeedback(null);
-      const result = await actionListProductDrafts();
-      setIsPending(false);
+      setResumeFeedback(null);
 
-      if ("error" in result) {
-        setFeedback({
-          error: result.error ?? "Unable to resume product draft.",
-          errorCode: result.errorCode,
-        });
+      try {
+        const result = await actionListProductDrafts();
+
+        if ("error" in result) {
+          setResumeFeedback({
+            error: result.error ?? "Unable to resume product draft.",
+            errorCode: result.errorCode,
+          });
+          return null;
+        }
+
+        const matchingDraft = result.drafts.find(
+          (candidate) =>
+            candidate.mode === mode &&
+            (mode === "create" ||
+              candidate.target_product_uuid === targetProductUuid),
+        );
+
+        if (!matchingDraft) {
+          return null;
+        }
+
+        setDraft(matchingDraft);
+        setSavedLabel("Draft resumed");
+        return matchingDraft;
+      } catch (error) {
+        console.error(
+          "[product-draft] resume request failed",
+          error instanceof Error ? error.name : typeof error,
+        );
+        setResumeFeedback({ error: "Unable to load product drafts." });
         return null;
+      } finally {
+        setIsPending(false);
       }
-
-      const matchingDraft = result.drafts.find(
-        (candidate) =>
-          candidate.mode === mode &&
-          (mode === "create" ||
-            candidate.target_product_uuid === targetProductUuid),
-      );
-
-      if (!matchingDraft) {
-        return null;
-      }
-
-      setDraft(matchingDraft);
-      setSavedLabel("Draft resumed");
-      return matchingDraft;
     },
     [],
   );
@@ -100,10 +115,16 @@ export default function useProductDraft(uuid?: string) {
     async (input: StartDraftInput, advance = false) => {
       setIsPending(true);
       setFeedback(null);
-      const result = await actionStartProductDraft(input);
-      setIsPending(false);
 
-      if (isDraft(result)) {
+      try {
+        const result = await actionStartProductDraft(input);
+
+        if (!isDraft(result)) {
+          setFeedback(toFeedback(result));
+          return null;
+        }
+
+        setDraft(result);
         if (advance) {
           const advanced = await actionSaveProductDraftStep(
             result.uuid,
@@ -121,13 +142,18 @@ export default function useProductDraft(uuid?: string) {
           return null;
         }
 
-        setDraft(result);
         setSavedLabel("Draft created");
         return result;
+      } catch (error) {
+        console.error(
+          "[product-draft] create request failed",
+          error instanceof Error ? error.name : typeof error,
+        );
+        setFeedback({ error: "Unable to save product draft." });
+        return null;
+      } finally {
+        setIsPending(false);
       }
-
-      setFeedback(toFeedback(result));
-      return null;
     },
     [],
   );
@@ -267,6 +293,7 @@ export default function useProductDraft(uuid?: string) {
     isPending,
     loadDraft: uuid ? () => loadDraft(uuid) : loadDraft,
     removeMedia,
+    resumeFeedback,
     resumeDraft,
     savedLabel,
     saveStep,

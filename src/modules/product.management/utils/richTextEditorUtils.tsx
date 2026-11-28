@@ -11,6 +11,7 @@ import { InsertImage } from "@/components/editor/plugins/toolbar/block-insert/in
 import { ElementFormatToolbarPlugin } from "@/components/editor/plugins/toolbar/element-format-toolbar-plugin";
 import { FontFormatToolbarPlugin } from "@/components/editor/plugins/toolbar/font-format-toolbar-plugin";
 import { ToolbarPlugin } from "@/components/editor/plugins/toolbar/toolbar-plugin";
+import { escapeHtmlFragment } from "@/modules/product.management/utils/sanitizeRichHtml";
 import { createHeadlessEditor } from "@lexical/headless";
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
@@ -98,14 +99,50 @@ export function lexicalJsonToHtml(
 ): string {
   if (json === undefined) return "";
   const serialized = typeof json === "string" ? json : JSON.stringify(json);
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(serialized);
+  } catch {
+    return toEditorHtml(serialized);
+  }
+
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    !("root" in parsed) ||
+    typeof parsed.root !== "object" ||
+    parsed.root === null
+  ) {
+    return toEditorHtml(serialized);
+  }
 
   const editor = createHeadlessEditor({
     namespace: "ProductRichText",
     nodes,
-    onError: (e) => console.error(e),
+    onError: (error) =>
+      console.error("[product-authoring] rich-text parse failed", error.name),
   });
 
-  editor.setEditorState(editor.parseEditorState(serialized));
-
-  return editor.getEditorState().read(() => $generateHtmlFromNodes(editor));
+  try {
+    editor.setEditorState(editor.parseEditorState(serialized));
+    return editor.getEditorState().read(() => $generateHtmlFromNodes(editor));
+  } catch (error) {
+    console.error(
+      "[product-authoring] rich-text parse failed",
+      error instanceof Error ? error.name : typeof error,
+    );
+    return toEditorHtml(serialized);
+  }
 }
+
+const SUPPORTED_EDITOR_HTML_TAG =
+  /<\/?(?:p|br|strong|b|em|i|u|s|ul|ol|li|h[1-6]|blockquote|code|pre|a|img|span|div)(?:\s|\/|>)/i;
+
+const toEditorHtml = (value: string): string => {
+  if (value === "" || SUPPORTED_EDITOR_HTML_TAG.test(value)) {
+    return value;
+  }
+
+  return `<p>${escapeHtmlFragment(value)}</p>`;
+};

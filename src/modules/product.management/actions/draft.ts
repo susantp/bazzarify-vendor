@@ -64,6 +64,10 @@ export const actionListProductDrafts = async (): Promise<
     }
     return parsed.data.data.payload;
   } catch (error) {
+    console.error(
+      "[product-draft] resume list failed",
+      error instanceof Error ? error.message : typeof error,
+    );
     return handleUnknownError(error);
   }
 };
